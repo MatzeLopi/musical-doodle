@@ -34,7 +34,9 @@ async def get_tracks():
 
 @router.get("/stream")
 async def stream_audio(file_name: str):
-    file_path = Path("/home/matthias/WS_all/AudioDeamon/audio_files/test_audio.wav")
+    file_path = Path(
+        "/home/matthias/WS_all/AudioDeamon/backend/audio_files/test_audio.wav"
+    )
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     return StreamingResponse(stream_chunks(file_path), media_type="audio/wav")
