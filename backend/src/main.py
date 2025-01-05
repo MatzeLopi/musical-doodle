@@ -1,7 +1,5 @@
-from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
 
 from routers.sound import router as sound_router
 
@@ -11,7 +9,7 @@ app.include_router(sound_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -20,4 +18,9 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return HTMLResponse(Path("static/index.html").read_text())
+    return "Hello World"
+
+
+@app.get("/user/{user_id}")
+def test(user_id: int):
+    return {"user_id": user_id}
