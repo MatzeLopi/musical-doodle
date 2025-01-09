@@ -43,6 +43,13 @@ async def get_tracks():
     track_list: list = os.listdir(
         "/home/matthias/WS_all/AudioDeamon/backend/audio_files"
     )
+    track_list = [{"id": i, "title": track} for i, track in enumerate(track_list)]
+
+    track_list = [
+        {"id": i, "title": f"Really Long Title {i}", "source": f"source_{i}"}
+        for i in range(100)
+    ]
+
     return track_list
 
 

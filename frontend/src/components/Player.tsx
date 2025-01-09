@@ -67,72 +67,89 @@ const Player: React.FC<PlayerProps> = ({ src }) => {
     };
 
     return (
-        <div className="player bg-gray-500 bg-opacity-75 text-white shadow-lg rounded-lg p-6 w-full max-w-md mx-auto mt-8">
+        <div className="player bg-gray-200 text-gray-800 shadow-md rounded-lg p-4 w-full max-w-xs mx-auto">
+            {/* Time and Seek Bar */}
             <div className="flex items-center justify-between mb-4">
-                <span className="text-sm">{formatTime(currentTime)}</span>
+                <span className="text-xs font-medium">{formatTime(currentTime)}</span>
                 <input
                     type="range"
                     min="0"
                     max={duration || 0}
                     value={currentTime}
                     onChange={handleSeek}
-                    className="w-full mx-4 cursor-pointer appearance-none h-2 bg-gray-100 rounded-lg"
+                    className="w-full mx-2 h-2 bg-gray-300 rounded-lg cursor-pointer appearance-none"
                 />
-                <span className="text-sm">{formatTime(duration)}</span>
+                <span className="text-xs font-medium">{formatTime(duration)}</span>
             </div>
+
             <audio ref={audioRef} className="hidden">
                 <source src={src} type="audio/wav" />
                 Your browser does not support the audio element.
             </audio>
 
-            <div className="flex justify-center gap-4">
-
+            {/* Control Buttons */}
+            <div className="flex justify-around">
+                {/* Back to beginning */}
                 <button
                     onClick={() => {
                         const audio = audioRef.current;
                         if (audio) {
-                            audio.currentTime = Math.max(audio.currentTime - 10, 0);
+                            audio.currentTime = 0;
                         }
                     }}
-                    className="px-4 py-2 bg-green-500 text-white rounded-full hover:bg-green-400 transition"
+                    className="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-400 transition focus:outline-none"
                 >
-                    -10s
-                </button>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                    >
+                        <path
+                            fillRule="evenodd"
+                            d="M12 2.181a.75.75 0 0 1 1.177-.616l4.432 3.068a.75.75 0 0 1 0 1.234l-4.432 3.068A.75.75 0 0 1 12 8.32V6a7 7 0 1 0 7 7 1 1 0 1 1 2 0 9 9 0 1 1-9-9V2.181z"
+                            clipRule="evenodd"
+                        />
+                    </svg>
 
+                </button>
+                {/* Play */}
                 <button
                     onClick={() => audioRef.current?.play()}
-                    className="px-4 py-2 bg-green-500 text-white rounded-full hover:bg-green-400 transition flex items-center justify-center"
+                    className="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-400 transition focus:outline-none"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-6 w-6"
-                        viewBox="0 0 20 20"
+                        viewBox="0 0 24 24"
                         fill="currentColor"
                     >
                         <path
                             fillRule="evenodd"
-                            d="M4.293 4.293a1 1 0 011.414 0L14 12.586a1 1 0 010 1.414l-8.293 8.293a1 1 0 01-1.414-1.414L11.586 13 4.293 5.707a1 1 0 010-1.414z"
+                            d="M8.286 3.407A1.5 1.5 0 0 0 6 4.684v14.632a1.5 1.5 0 0 0 2.286 1.277l11.888-7.316a1.5 1.5 0 0 0 0-2.555L8.286 3.407z"
                             clipRule="evenodd"
                         />
                     </svg>
                 </button>
+                {/* Pause */}
                 <button
                     onClick={() => audioRef.current?.pause()}
-                    className="px-4 py-2 bg-green-500 text-white rounded-full hover:bg-green-400 transition flex items-center justify-center"
+                    className="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-400 transition focus:outline-none"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-6 w-6"
-                        viewBox="0 0 20 20"
+                        viewBox="0 0 24 24"
                         fill="currentColor"
                     >
                         <path
                             fillRule="evenodd"
-                            d="M6 4a1 1 0 011 1v10a1 1 0 11-2 0V5a1 1 0 011-1zm7 0a1 1 0 011 1v10a1 1 0 11-2 0V5a1 1 0 011-1z"
+                            d="M5.163 3.819C5 4.139 5 4.559 5 5.4v13.2c0 .84 0 1.26.163 1.581a1.5 1.5 0 0 0 .656.655c.32.164.74.164 1.581.164h.2c.84 0 1.26 0 1.581-.163a1.5 1.5 0 0 0 .656-.656c.163-.32.163-.74.163-1.581V5.4c0-.84 0-1.26-.163-1.581a1.5 1.5 0 0 0-.656-.656C8.861 3 8.441 3 7.6 3h-.2c-.84 0-1.26 0-1.581.163a1.5 1.5 0 0 0-.656.656zm9 0C14 4.139 14 4.559 14 5.4v13.2c0 .84 0 1.26.164 1.581a1.5 1.5 0 0 0 .655.655c.32.164.74.164 1.581.164h.2c.84 0 1.26 0 1.581-.163a1.5 1.5 0 0 0 .655-.656c.164-.32.164-.74.164-1.581V5.4c0-.84 0-1.26-.163-1.581a1.5 1.5 0 0 0-.656-.656C17.861 3 17.441 3 16.6 3h-.2c-.84 0-1.26 0-1.581.163a1.5 1.5 0 0 0-.655.656z"
                             clipRule="evenodd"
                         />
                     </svg>
                 </button>
+                {/* Forward 10 seconds */}
                 <button
                     onClick={() => {
                         const audio = audioRef.current;
@@ -140,9 +157,20 @@ const Player: React.FC<PlayerProps> = ({ src }) => {
                             audio.currentTime = Math.min(audio.currentTime + 10, duration);
                         }
                     }}
-                    className="px-4 py-2 bg-green-500 text-white rounded-full hover:bg-green-400 transition"
+                    className="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-400 transition focus:outline-none"
                 >
-                    +10s
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                    >
+                        <path
+                            fillRule="evenodd"
+                            d="M3 5.625C3 4.6 4.167 4.01 4.992 4.619L12 9.787V5.625c0-1.025 1.167-1.615 1.992-1.006l8.371 6.174a1.5 1.5 0 0 1 0 2.414l-8.371 6.174c-.825.609-1.992.02-1.992-1.006v-4.163l-7.008 5.169C4.167 19.99 3 19.401 3 18.375V5.625z"
+                            clipRule="evenodd"
+                        />
+                    </svg>
                 </button>
             </div>
         </div>
