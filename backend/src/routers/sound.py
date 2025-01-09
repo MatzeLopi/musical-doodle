@@ -40,14 +40,16 @@ async def get_sound():
 
 @router.get("/tracks")
 async def get_tracks():
-    track_list: list = os.listdir(
-        "/home/matthias/WS_all/AudioDeamon/backend/audio_files"
-    )
-    track_list = [{"id": i, "title": track} for i, track in enumerate(track_list)]
+    directory = Path("/home/matthias/WS_all/AudioDeamon/backend/audio_files")
+    track_list: list[Path] = [directory / f for f in os.listdir(directory)]
 
     track_list = [
-        {"id": i, "title": f"Really Long Title {i}", "source": f"source_{i}"}
-        for i in range(100)
+        {
+            "id": index,
+            "title": element.stem,
+            "source": f"http://localhost:8000/sound/stream?file_name={element}",
+        }
+        for index, element in enumerate(track_list)
     ]
 
     return track_list
@@ -56,9 +58,7 @@ async def get_tracks():
 @router.head("/stream")
 @router.get("/stream")
 async def stream_audio(file_name: str, request: Request):
-    file_path = Path(
-        f"/home/matthias/WS_all/AudioDeamon/backend/audio_files/test_audio.wav"
-    )
+    file_path = Path(file_name)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -90,7 +90,7 @@ async def stream_audio(file_name: str, request: Request):
         "Content-Length": str(content_length),
         "Content-Type": "audio/wav",
         "X-Total-Duration": str(_get_audio_duration(file_path)),
-        "X-Title": file_name,  # TODO: Get the title from the DB
+        "X-Title": file_path.stem,  # TODO: Get the title from the DB
     }
 
     return StreamingResponse(

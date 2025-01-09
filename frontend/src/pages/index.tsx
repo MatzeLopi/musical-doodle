@@ -8,6 +8,10 @@ import { AudioType } from "../components/Audio";
 
 const Home: NextPage = () => {
   const [data, setData] = useState<AudioType[]>([]);
+  const [currentAudio, setCurrentAudio] = useState<{ src?: string; title?: string }>({
+    src: undefined,
+    title: undefined,
+  });
 
   const fetchData = async (endpoint: string) => {
     try {
@@ -20,6 +24,12 @@ const Home: NextPage = () => {
     }
   };
 
+  const handlePlay = (audio: AudioType) => {
+    console.log("Playing audio:", audio.title);
+    console.log("Source:", audio.source);
+    setCurrentAudio({ src: audio.source, title: audio.title });
+  };
+
   return (
     <>
       <Head>
@@ -27,10 +37,15 @@ const Home: NextPage = () => {
       </Head>
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
         <h1 className="text-4xl font-bold mb-4">Home</h1>
-        <button onClick={() => fetchData("http://localhost:8000/sound/tracks")}>Fetch Data</button>
+        <button
+          onClick={() => fetchData("http://localhost:8000/sound/tracks")}
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 transition duration-300"
+        >
+          Fetch Data
+        </button>
 
-        <AudioList audios={data} />
-        <Player src="http://localhost:8000/sound/stream?file_name=Some Long Audio Name" />
+        <AudioList audios={data} onPlay={handlePlay} />
+        <Player src={currentAudio.src} title={currentAudio.title} />
       </div>
     </>
   );

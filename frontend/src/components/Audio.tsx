@@ -8,9 +8,10 @@ interface AudioType {
 
 interface AudioProps {
     audio: AudioType;
+    onPlay: () => void; // Callback for playing audio
 }
 
-const Audio: React.FC<AudioProps> = ({ audio }) => {
+const Audio: React.FC<AudioProps> = ({ audio, onPlay }) => {
     return (
         <div className="flex items-center justify-between px-4 py-2 hover:bg-gray-100 transition">
             <div className="flex items-center space-x-4">
@@ -18,7 +19,9 @@ const Audio: React.FC<AudioProps> = ({ audio }) => {
                 <p className="text-gray-800 font-medium text-base">{audio.title}</p>
             </div>
             <div className="flex items-center space-x-2">
-                <button className="text-green-500 hover:underline text-sm">
+                <button className="text-green-500 hover:underline text-sm"
+                    onClick={onPlay}>
+
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-6 w-6"
@@ -33,7 +36,7 @@ const Audio: React.FC<AudioProps> = ({ audio }) => {
                     </svg>
                 </button>
             </div>
-        </div>
+        </div >
     );
 };
 

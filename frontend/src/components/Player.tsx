@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 
+
 interface PlayerProps {
     src?: string;
     title?: string;
@@ -13,6 +14,7 @@ const Player: React.FC<PlayerProps> = ({ src, title }) => {
 
     useEffect(() => {
         const fetchDuration = async () => {
+            console.log("Fetching headers for:", src);
             if (src === undefined) {
                 return;
             }
@@ -43,10 +45,18 @@ const Player: React.FC<PlayerProps> = ({ src, title }) => {
         fetchDuration();
     }, [src]);
 
-
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (audio) {
+            // Play the new audio when the `src` changes
+            audio.load();
+            audio.play().catch((err) => console.error("Playback error:", err));
+        }
+    }, [src]);
 
     useEffect(() => {
         const audio = audioRef.current;
+
         if (audio) {
             const handleLoadedMetadata = () => {
                 if (!duration) {
