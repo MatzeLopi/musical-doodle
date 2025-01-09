@@ -1,16 +1,21 @@
 import React, { useRef, useState, useEffect } from "react";
 
 interface PlayerProps {
-    src: string;
+    src?: string;
+    title?: string;
 }
 
-const Player: React.FC<PlayerProps> = ({ src }) => {
+const Player: React.FC<PlayerProps> = ({ src, title }) => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [duration, setDuration] = useState<number>(0);
     const [currentTime, setCurrentTime] = useState<number>(0);
+    const [audioTitle, setAudioTitle] = useState<string>("");
 
     useEffect(() => {
         const fetchDuration = async () => {
+            if (src === undefined) {
+                return;
+            }
             try {
                 const response = await fetch(src, {
                     method: "HEAD",
@@ -22,6 +27,14 @@ const Player: React.FC<PlayerProps> = ({ src }) => {
                 } else {
                     console.error("X-Total-Duration header not found");
                 }
+
+                const title = response.headers.get("X-Title");
+                if (title) {
+                    setAudioTitle(title);
+                } else {
+                    console.error("X-Title header not found");
+                }
+
             } catch (error) {
                 console.error("Failed to fetch headers:", error);
             }
@@ -29,6 +42,8 @@ const Player: React.FC<PlayerProps> = ({ src }) => {
 
         fetchDuration();
     }, [src]);
+
+
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -68,6 +83,10 @@ const Player: React.FC<PlayerProps> = ({ src }) => {
 
     return (
         <div className="player bg-gray-200 text-gray-800 shadow-md rounded-lg p-4 w-full max-w-xs mx-auto">
+            {/* Title */}
+            <h2 className="text-center font-semibold text-lg text-gray-700 mb-4">
+                {audioTitle || title}
+            </h2>
             {/* Time and Seek Bar */}
             <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-medium">{formatTime(currentTime)}</span>

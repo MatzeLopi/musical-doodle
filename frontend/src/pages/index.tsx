@@ -30,7 +30,7 @@ const Home: NextPage = () => {
         <button onClick={() => fetchData("http://localhost:8000/sound/tracks")}>Fetch Data</button>
 
         <AudioList audios={data} />
-        <Player src="http://localhost:8000/sound/stream?file_name=test" />
+        <Player src="http://localhost:8000/sound/stream?file_name=Some Long Audio Name" />
       </div>
     </>
   );

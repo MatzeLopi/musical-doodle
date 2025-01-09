@@ -90,6 +90,7 @@ async def stream_audio(file_name: str, request: Request):
         "Content-Length": str(content_length),
         "Content-Type": "audio/wav",
         "X-Total-Duration": str(_get_audio_duration(file_path)),
+        "X-Title": file_name,  # TODO: Get the title from the DB
     }
 
     return StreamingResponse(
