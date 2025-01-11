@@ -15,7 +15,6 @@ const AudioList: React.FC<AudioListProps> = ({ audios, onPlay }) => {
         <div className="max-w-4xl mx-auto p-4">
             <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-200">
                 {audios.map((audio) => (
-                    console.log(audio),
                     <Audio key={audio.id} audio={audio} onPlay={() => onPlay(audio)} />
                 ))}
             </div>
