@@ -26,3 +26,5 @@ const PlayButton: React.FC<PlayButtonProps> = (func) => {
     );
 };
 export default PlayButton;
+
+import { useRouter } from 'next/router';

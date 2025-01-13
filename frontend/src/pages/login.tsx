@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 const Login: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const router = useRouter();
 
 
     const [csrfToken, setCsrfToken] = useState<string | null>(null);
@@ -43,7 +45,9 @@ const Login: React.FC = () => {
 
             const data = await response.json();
             console.log('Login successful:', data);
-            // Handle successful login here
+            // Handle successful login
+            const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || '/';
+            router.push(redirectUrl); // Redirect to the saved URL or homepage
         } catch (err) {
             setError('Login failed. Please check your credentials and try again.');
         }

@@ -4,6 +4,8 @@ import { useState } from "react";
 import Player from "../components/Player";
 import AudioList from "../components/List";
 import { AudioType } from "../components/Audio";
+import LoginButton from "../components/LoginButton";
+import LogoutButton from "../components/LogoutButton";
 
 
 const Home: NextPage = () => {
@@ -46,6 +48,9 @@ const Home: NextPage = () => {
 
         <AudioList audios={data} onPlay={handlePlay} />
         <Player src={currentAudio.src} title={currentAudio.title} />
+
+        <LoginButton />
+        <LogoutButton />
       </div>
     </>
   );

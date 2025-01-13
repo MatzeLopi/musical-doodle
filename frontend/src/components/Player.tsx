@@ -11,6 +11,21 @@ const Player: React.FC<PlayerProps> = ({ src, title }) => {
     const [duration, setDuration] = useState<number>(0);
     const [currentTime, setCurrentTime] = useState<number>(0);
     const [audioTitle, setAudioTitle] = useState<string>("");
+    const [userInteracted, setUserInteracted] = useState<boolean>(false);
+
+    // Track user interaction
+    const handleUserInteraction = () => {
+        setUserInteracted(true);
+    };
+
+    // Listen for user interaction (click anywhere on the page)
+    useEffect(() => {
+        document.addEventListener('click', handleUserInteraction);
+        return () => {
+            document.removeEventListener('click', handleUserInteraction);
+        };
+    }, []);
+
 
     useEffect(() => {
         const fetchDuration = async () => {
@@ -47,7 +62,7 @@ const Player: React.FC<PlayerProps> = ({ src, title }) => {
 
     useEffect(() => {
         const audio = audioRef.current;
-        if (audio) {
+        if (audio && src && userInteracted) {
             // Play the new audio when the `src` changes
             audio.load();
             audio.play().catch((err) => console.error("Playback error:", err));
