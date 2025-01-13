@@ -4,7 +4,7 @@ import os
 import wave
 from typing import Optional
 from pathlib import Path
-from fastapi import HTTPException, Response, Request
+from fastapi import HTTPException, Request
 from fastapi.routing import APIRouter
 from fastapi.responses import StreamingResponse
 

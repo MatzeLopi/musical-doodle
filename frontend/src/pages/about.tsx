@@ -7,15 +7,14 @@ const About: NextPage = () => {
             <Head>
                 <title>About</title>
             </Head>
-            <div>
+            <div className="flex flex-col items-center justify-center min-h-screen p-4">
                 <h1 className="text-4xl font-bold mb-4">About</h1>
-                <p>
-                    Createor centered autio streaming platform
+                <p className="text-center">
+                    Creator centered audio streaming platform
                 </p>
             </div>
         </>
     );
-
 };
 
 export default About;

@@ -9,6 +9,7 @@ from jwt import InvalidTokenError
 from pydantic import BaseModel
 from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.requests import Request
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +31,33 @@ INTERNAL_KEY = "SOMEKEY"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+async def validate_csrf_token(request: Request):
+    """Validate a CSRF token.
+
+    Args:
+        request (Request): Request object.
+
+    Raises:
+        HTTPException: Raised if the token is missing or invalid.
+
+    Returns:
+        bool: Indicates if the token is valid.
+    """
+
+    # Get CSRF token from the header
+    client_token = request.headers.get("X-CSRF-Token")
+    # Get CSRF token from the cookie
+    cookie_token = request.cookies.get("csrf_token")
+
+    if not client_token or not cookie_token:
+        raise HTTPException(status_code=400, detail="CSRF token missing")
+
+    if client_token != cookie_token:
+        raise HTTPException(status_code=401, detail="CSRF token invalid")
+
+    return True
 
 
 async def get_db():
@@ -140,7 +168,7 @@ async def create_access_token(
     return encoded_jwt
 
 
-async def get_current_user(
+async def oauth_current_user(
     token: Annotated[str, Depends(oauth2_scheme)], db: AsyncSession = Depends(get_db)
 ):
     """Get the current user from the token.
@@ -159,6 +187,48 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            logger.debug("Username not found in token")
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except InvalidTokenError:
+        logger.debug(f"Invalid token: {token}")
+        raise credentials_exception
+
+    try:
+        user = await get_user(db, username=token_data.username)
+    except ValueError:
+        logger.debug(f"User not found: {token_data.username}")
+        raise credentials_exception
+    else:
+        return user
+
+
+async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)):
+    """Get the current user from the token stored in cookies.
+
+    Args:
+        request (Request): The HTTP request object.
+        db (AsyncSession): Database session dependency.
+
+    Raises:
+        HTTPException: Raised if the credentials are invalid.
+
+    Returns:
+        User: The authenticated user.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    token = request.cookies.get("access_token")
+    if not token:
+        raise credentials_exception
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")

@@ -4,7 +4,8 @@ from typing import Annotated
 from datetime import timedelta
 
 # Third-party modules
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi.responses import JSONResponse, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ from backend.dependencies import (
     authenticate_user,
     create_access_token,
     Token,
+    validate_csrf_token,
 )
 
 # Routers
@@ -37,11 +39,26 @@ app.add_middleware(
 )
 
 
+@app.get("/csrf-token")
+def get_csrf_token(response: Response):
+    csrf_token = "TOKEN"  # Generate a random token
+    response.set_cookie(
+        key="csrf_token",
+        value=csrf_token,
+        httponly=True,  # Prevent JavaScript access
+        secure=True,  # Use HTTPS in production
+        samesite="Strict",
+    )
+    return {"csrf_token": csrf_token}
+
+
 @app.post("/token")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    request: Request,
     db: Session = Depends(get_db),
 ) -> Token:
+    await validate_csrf_token(request)
     user = await authenticate_user(form_data.username, form_data.password, db)
     if not user:
         raise HTTPException(
@@ -53,14 +70,26 @@ async def login_for_access_token(
     access_token = await create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
-    return Token(access_token=access_token, token_type="bearer")
+
+    response = JSONResponse({"message": "Login successful"})
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {access_token}",
+        httponly=True,
+        secure=False,  # Use HTTPS in production
+        samesite="strict",
+    )
+    return response
+
+
+@app.post("/logout")
+def logout(response: Response):
+    response.delete_cookie(
+        key="access_token", httponly=True, samesite="Strict", secure=True
+    )
+    return {"message": "Logged out successfully"}
 
 
 @app.get("/")
 def root():
-    return "Hello World"
-
-
-@app.get("/user/{user_id}")
-def test(user_id: int):
-    return {"user_id": user_id}
+    return {"status": "running"}
