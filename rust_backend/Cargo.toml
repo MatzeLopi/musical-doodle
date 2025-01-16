@@ -28,8 +28,8 @@ serde = { version = "1", features = ["derive"] }
 argon2 = "0.5"
 
 # axum builds on the types in Tower
-tower = "0.4.11"
-tower-http = { version = "0.5.0", features = [
+tower = "0.5"
+tower-http = { version = "0.5", features = [
     "catch-panic",
     "compression-full",
     "sensitive-headers",

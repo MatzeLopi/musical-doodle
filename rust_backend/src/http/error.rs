@@ -17,11 +17,6 @@ pub enum Error {
     #[error("request path not found")]
     NotFound,
 
-    #[error("error in the request body")]
-    UnprocessableEntity {
-        errors: HashMap<Cow<'static, str>, Vec<Cow<'static, str>>>,
-    },
-
     #[error("an error occurred with the database")]
     Sqlx(#[from] sqlx::Error),
 
