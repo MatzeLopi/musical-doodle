@@ -26,7 +26,7 @@ const Login: React.FC = () => {
             const formData = new URLSearchParams();
             formData.append('username', username);
             formData.append('password', password);
-
+            
             const response = await fetch('http://localhost:8000/token', {
                 method: 'POST',
                 headers: {
