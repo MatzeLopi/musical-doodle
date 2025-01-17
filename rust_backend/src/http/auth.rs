@@ -1,19 +1,41 @@
 // Router for auth and csrf token generation
-
+use crate::http::dependencies;
+use crate::http::AppState;
+use axum::extract::Request;
 use axum::http::{header::SET_COOKIE, HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, Router};
 use rand::{distributions::Alphanumeric, Rng};
+use std::sync::Arc;
 use std::time::Duration;
 
-pub fn router() -> Router {
+enum TokenType {
+    Bearer,
+    JWT,
+}
+struct Token {
+    access_token: String,
+    token_type: TokenType,
+}
+
+pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(ok))
         .route("/csft", get(get_csfr))
+        .with_state(state)
 }
 
 async fn ok() -> String {
     "ok".to_string()
+}
+
+async fn access_token(req: Request) -> Token {
+    dependencies::validate_csfr(req).await;
+
+    return Token {
+        access_token: "access_token".to_string(),
+        token_type: TokenType::Bearer,
+    };
 }
 
 async fn get_csfr() -> impl IntoResponse {

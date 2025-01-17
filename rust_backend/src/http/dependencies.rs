@@ -1,9 +1,10 @@
-use crate::http::error::Error as HTTPError;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
 use axum::extract::Request;
+
+use crate::http::error::Error as HTTPError;
 
 async fn hash_password(password: String) -> String {
     let salt = SaltString::generate(&mut OsRng);
@@ -17,10 +18,10 @@ async fn hash_password(password: String) -> String {
     return password_hash;
 }
 
-async fn validate_password(password: &str) -> Result<bool, E> {
-    let parsed_hash = PasswordHash::new(&password)?;
+async fn validate_password(password: &str) -> Result<bool, HTTPError> {
+    let parsed_hash = PasswordHash::new(&password).unwrap();
     let result = Argon2::default()
-        .verify_password(password, &parsed_hash)
+        .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok();
 
     if result {
@@ -30,7 +31,7 @@ async fn validate_password(password: &str) -> Result<bool, E> {
     }
 }
 
-async fn validate_csfr(request: Request) -> bool {
+pub async fn validate_csfr(request: Request) -> bool {
     // Get the cookie
     let client_token = request.headers().get("X-CSRF-TOKEN").unwrap();
     let server_token = request.headers().get("csfr_token").unwrap();
