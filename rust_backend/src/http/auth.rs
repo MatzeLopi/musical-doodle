@@ -8,15 +8,8 @@ use axum::routing::{get, Router};
 use rand::{distributions::Alphanumeric, Rng};
 use std::sync::Arc;
 use std::time::Duration;
-
-enum TokenType {
-    Bearer,
-    JWT,
-}
-struct Token {
-    access_token: String,
-    token_type: TokenType,
-}
+use serde_json::json;
+use crate::http::dependencies::{Token, TokenType};
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -25,13 +18,15 @@ pub fn router(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
-async fn ok() -> String {
-    "ok".to_string()
+async fn ok() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        axum::Json(json!({ "status": "ok" })),
+    )
 }
 
 async fn access_token(req: Request) -> Token {
-    dependencies::validate_csfr(req).await;
-
+    dependencies::validate_csrf(&req).await;
     return Token {
         access_token: "access_token".to_string(),
         token_type: TokenType::Bearer,
