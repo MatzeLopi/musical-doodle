@@ -14,6 +14,9 @@ pub enum Error {
     #[error("request path not found")]
     NotFound,
 
+    #[error("Internal Server Error")]
+    InternalServerError,
+
     #[error("an error occurred with the database")]
     Sqlx(#[from] sqlx::Error),
 
@@ -27,6 +30,7 @@ impl Error {
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
+            Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Sqlx(_) | Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -38,7 +42,7 @@ impl IntoResponse for Error {
             Self::Unauthorized => {
                 return (
                     self.status_code(),
-                    [(WWW_AUTHENTICATE, "Token")],
+                    [(WWW_AUTHENTICATE, "JWT")],
                     self.to_string(),
                 )
                     .into_response();

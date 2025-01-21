@@ -1,15 +1,21 @@
 // Router for auth and csrf token generation
-use crate::http::dependencies;
 use crate::http::AppState;
-use axum::extract::Request;
-use axum::http::{header::SET_COOKIE, HeaderMap, StatusCode};
-use axum::response::IntoResponse;
-use axum::routing::{get, Router};
+use axum::{
+    extract::Json,
+    http::{header::SET_COOKIE, HeaderMap, StatusCode},
+    response::IntoResponse,
+    routing::{get, Router},
+};
 use rand::{distributions::Alphanumeric, Rng};
+use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
-use serde_json::json;
-use crate::http::dependencies::{Token, TokenType};
+
+pub struct NewUser {
+    pub username: String,
+    pub password: String,
+    pub email: String,
+}
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -19,18 +25,7 @@ pub fn router(state: Arc<AppState>) -> Router {
 }
 
 async fn ok() -> impl IntoResponse {
-    (
-        StatusCode::OK,
-        axum::Json(json!({ "status": "ok" })),
-    )
-}
-
-async fn access_token(req: Request) -> Token {
-    dependencies::validate_csrf(&req).await;
-    return Token {
-        access_token: "access_token".to_string(),
-        token_type: TokenType::Bearer,
-    };
+    (StatusCode::OK, axum::Json(json!({ "status": "ok" })))
 }
 
 async fn get_csfr() -> impl IntoResponse {
@@ -56,4 +51,8 @@ async fn get_csfr() -> impl IntoResponse {
         headers,
         format!(r#"{{"csrf_token": "{}"}}"#, csrf_token),
     );
+}
+
+async fn new_user(user: Json<NewUser>) -> impl IntoResponse {
+    // Create a new user
 }
