@@ -1,26 +1,24 @@
 // Router for auth and csrf token generation
+use crate::http::dependencies;
+use crate::http::error::Error as HTTPError;
 use crate::http::AppState;
+use crate::schemas::users::{NewUser, UserLogin};
 use axum::{
-    extract::Json,
+    extract::{Json, State},
     http::{header::SET_COOKIE, HeaderMap, StatusCode},
     response::IntoResponse,
-    routing::{get, Router},
+    routing::{get, post, Router},
 };
 use rand::{distributions::Alphanumeric, Rng};
 use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
 
-pub struct NewUser {
-    pub username: String,
-    pub password: String,
-    pub email: String,
-}
-
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(ok))
         .route("/csft", get(get_csfr))
+        .route("token", post(token))
         .with_state(state)
 }
 
@@ -53,6 +51,21 @@ async fn get_csfr() -> impl IntoResponse {
     );
 }
 
-async fn new_user(user: Json<NewUser>) -> impl IntoResponse {
+async fn token(
+    State(state): State<Arc<AppState>>,
+    Json(user): Json<UserLogin>,
+) -> Result<impl IntoResponse, HTTPError> {
+    let db = &state.db;
+    let auth_user = dependencies::auth_user(&user.username, &user.password, db).await;
+    match auth_user {
+        Ok(auth_user) => {
+            let token = auth_user.to_jwt(&state)?;
+            Ok(token)
+        }
+        Err(e) => Err(e),
+    }
+}
+
+async fn new_user(user: &Json<NewUser>) -> impl IntoResponse {
     // Create a new user
 }

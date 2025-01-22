@@ -11,6 +11,7 @@ use axum::{
     },
 };
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -21,6 +22,10 @@ const DEFAULT_SESSION_DURATION: time::Duration = time::Duration::weeks(1);
 
 const DEFAULT_AUTH: &str = "JWT";
 
+pub struct AuthUser {
+    pub user_id: Uuid,
+}
+
 pub enum TokenType {
     Bearer,
     JWT,
@@ -28,11 +33,6 @@ pub enum TokenType {
 pub struct Token {
     pub access_token: String,
     pub token_type: TokenType,
-}
-
-// Use in handler if Auth is needed
-pub struct AuthUser {
-    pub user_id: Uuid,
 }
 
 // Use in handler if auth is optional
@@ -46,29 +46,48 @@ struct AuthClaims {
     exp: i64,
 }
 
-async fn hash_password(password: String) -> String {
+fn hash_password(password: String) -> Result<String, HTTPError> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
 
-    let password_hash: String = argon2
-        .hash_password(password.as_bytes(), &salt)
-        .unwrap()
-        .to_string();
-
-    return password_hash;
+    match argon2.hash_password(password.as_bytes(), &salt) {
+        Ok(password_hash) => Ok(password_hash.to_string()),
+        Err(e) => {
+            log::debug!("Failed to hash password: {:?}", e);
+            Err(HTTPError::InternalServerError)
+        }
+    }
 }
 
-async fn validate_password(password: &str) -> Result<bool, HTTPError> {
-    let parsed_hash = PasswordHash::new(&password).unwrap();
+fn validate_password(password: &str, password_hash: &str) -> Result<bool, HTTPError> {
+    let parsed_hash = PasswordHash::new(password_hash).map_err(|e| {
+        log::debug!("Invalid password hash format: {:?}", e);
+        HTTPError::Unauthorized
+    })?;
     let result = Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok();
 
-    if result {
-        return Ok(true);
-    } else {
-        return Err(HTTPError::Unauthorized);
+    match result {
+        true => Ok(true),
+        false => Err(HTTPError::Unauthorized),
     }
+}
+
+pub async fn auth_user(username: &str, password: &str, db: &PgPool) -> Result<AuthUser, HTTPError> {
+    // Fetch password hash from the database
+    let row = sqlx::query!(
+        "SELECT id, password_hash FROM users WHERE username = $1",
+        username
+    )
+    .fetch_one(db)
+    .await
+    .expect("Failed to fetch user");
+
+    // Validate the password
+    validate_password(&password, &row.password_hash)?;
+
+    Ok(AuthUser { user_id: row.id })
 }
 
 impl AuthUser {

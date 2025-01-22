@@ -7,6 +7,7 @@ from sqlalchemy import (
     TIMESTAMP,
     UniqueConstraint,
     Boolean,
+    UUID,
 )
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.sql import func
@@ -18,7 +19,7 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID, primary_key=True)
     username = Column(String(50), unique=True, nullable=False)
     email = Column(String(100), unique=True, nullable=False)
     password_hash = Column(Text, nullable=False)

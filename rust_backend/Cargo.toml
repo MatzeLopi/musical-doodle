@@ -29,16 +29,6 @@ argon2 = "0.5"
 
 # axum builds on the types in Tower
 tower = "0.5"
-tower-http = { version = "0.5", features = [
-    "catch-panic",
-    "compression-full",
-    "sensitive-headers",
-    "timeout",
-    "trace",
-] }
-
-jwt = "0.16.0"
-sha2 = "0.9.8"
 
 time = "0.3.30"
 
@@ -46,7 +36,6 @@ uuid = { version = "1", features = ["serde"] }
 
 # Utility Crates
 anyhow = "1.0.48"
-async-trait = "0.1.51"
 dotenv = "0.15.0"
 env_logger = "0.10.0"
 itertools = "0.12"
