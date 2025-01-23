@@ -1,15 +1,15 @@
 // Router for auth and csrf token generation
-use crate::http::dependencies;
-use crate::http::error::Error as HTTPError;
-use crate::http::AppState;
-use crate::schemas::users::{NewUser, UserLogin};
+use crate::{
+    http::{dependencies, error::Error as HTTPError, utils, AppState},
+    schemas::users::{NewUser, UserLogin},
+};
+
 use axum::{
     extract::{Json, State},
     http::{header::SET_COOKIE, HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post, Router},
 };
-use rand::{distributions::Alphanumeric, Rng};
 use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
@@ -28,11 +28,7 @@ async fn ok() -> impl IntoResponse {
 
 async fn get_csfr() -> impl IntoResponse {
     // Generate a random token
-    let csrf_token: String = rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(20)
-        .map(char::from)
-        .collect();
+    let csrf_token: String = utils::random_string(32);
 
     // Cookie
     let cookie: String = format!(
@@ -66,6 +62,10 @@ async fn token(
     }
 }
 
-async fn new_user(user: &Json<NewUser>) -> impl IntoResponse {
+async fn create_user(user: &Json<NewUser>) -> impl IntoResponse {
     // Create a new user
+}
+
+async fn delete_user(username: &str) -> impl IntoResponse {
+    // Delete a user
 }

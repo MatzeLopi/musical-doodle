@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 mod dependencies;
 mod error;
+pub mod utils;
 // Include auth router
 mod auth;
 

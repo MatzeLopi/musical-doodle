@@ -1,4 +1,5 @@
 // External Crates
+use crate::crud;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
@@ -24,15 +25,6 @@ const DEFAULT_AUTH: &str = "JWT";
 
 pub struct AuthUser {
     pub user_id: Uuid,
-}
-
-pub enum TokenType {
-    Bearer,
-    JWT,
-}
-pub struct Token {
-    pub access_token: String,
-    pub token_type: TokenType,
 }
 
 // Use in handler if auth is optional
@@ -76,18 +68,12 @@ fn validate_password(password: &str, password_hash: &str) -> Result<bool, HTTPEr
 
 pub async fn auth_user(username: &str, password: &str, db: &PgPool) -> Result<AuthUser, HTTPError> {
     // Fetch password hash from the database
-    let row = sqlx::query!(
-        "SELECT id, password_hash FROM users WHERE username = $1",
-        username
-    )
-    .fetch_one(db)
-    .await
-    .expect("Failed to fetch user");
+    let (id, password_hash) = crud::user::get_hash(username, db).await?;
 
     // Validate the password
-    validate_password(&password, &row.password_hash)?;
+    validate_password(&password, &password_hash)?;
 
-    Ok(AuthUser { user_id: row.id })
+    Ok(AuthUser { user_id: id })
 }
 
 impl AuthUser {
@@ -147,7 +133,6 @@ impl AuthUser {
 }
 
 impl OptionalAuthUser {
-    /// If this is `Self(Some(AuthUser))`, return `AuthUser::user_id`
     pub fn user_id(&self) -> Option<Uuid> {
         self.0.as_ref().map(|auth_user| auth_user.user_id)
     }
