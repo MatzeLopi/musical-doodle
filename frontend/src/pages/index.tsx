@@ -40,7 +40,7 @@ const Home: NextPage = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       checkState();
-    }, 5000); // Check every 5 seconds
+    }, 5000);
 
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
