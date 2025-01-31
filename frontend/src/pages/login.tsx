@@ -8,16 +8,11 @@ const Login: React.FC = () => {
     const router = useRouter();
 
 
-    const [csrfToken, setCsrfToken] = useState<string | null>(null);
-
     useEffect(() => {
         // Fetch the CSRF token from the server
-        fetch('http://localhost:8000/csrf-token', {
-            credentials: 'include', // Include cookies in the request
+        fetch('http://localhost:8080/csft', {
+            credentials: 'include',
         })
-            .then((response) => response.json())
-            .then((data) => setCsrfToken(data.csrf_token))
-            .catch((err) => console.error('Error fetching CSRF token:', err));
     }, []);
 
     const handleSubmit = async (event: React.FormEvent) => {
@@ -26,12 +21,11 @@ const Login: React.FC = () => {
             const formData = new URLSearchParams();
             formData.append('username', username);
             formData.append('password', password);
-            
-            const response = await fetch('http://localhost:8000/token', {
+
+            const response = await fetch('http://localhost:8080/token', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRF-Token': csrfToken || '', // Add the CSRF token to the headers
                 },
                 credentials: 'include', // Include cookies in the request
                 body: formData.toString(),
