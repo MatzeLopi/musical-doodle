@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
+import { fetchFromAPI } from '../utils/communication';
 
 const Login: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -7,18 +8,22 @@ const Login: React.FC = () => {
     const [error, setError] = useState('');
     const router = useRouter();
 
-    const csrfFetched = useRef(false); // Prevent duplicate requests
-
-    const getCookie = (name: string) => {
-        return Object.fromEntries(document.cookie.split(";").map(c => c.split("=")))[name];
-    };
-
     useEffect(() => {
-        if (csrfFetched.current) return; // Prevent duplicate fetch
-        csrfFetched.current = true;
+        const fetchData = async () => {
+            try {
+                const response = await fetchFromAPI('/token/get', { method: 'POST', body: JSON.stringify({ password: "", username: "" }) });
+                console.log(response.status)
+                if (response.status == 302) {
+                    const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || '/';
+                    router.push(redirectUrl); // Redirect to the saved URL or homepage
+                }
+            } catch (err) {
+                console.log(err)
+            }
 
-        fetch('http://localhost:8080/csft', { credentials: 'include' })
-            .catch(err => console.error("CSRF Fetch Error:", err));
+            // Perform any action you want on page load
+        };
+        fetchData();
     }, []);
 
     const handleSubmit = async (event: React.FormEvent) => {
@@ -26,11 +31,10 @@ const Login: React.FC = () => {
         try {
 
 
-            const response = await fetch('http://localhost:8080/token', {
+            const response = await fetch('http://localhost:8080/token/get', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x_csft': getCookie("x_csft")
                 },
                 credentials: 'include', // Include cookies in the request
                 body: JSON.stringify({
@@ -38,13 +42,14 @@ const Login: React.FC = () => {
                     password: password,
                 }),
             });
+            if (response.status == 302) {
+                console.log("Already logged in")
 
-            if (!response.ok) {
-                throw new Error('Login failed');
             }
 
-            const data = await response.json();
-            document.cookie = `token=${data}; path=/; HttpOnly; Secure; SameSite=Strict`;
+            else if (!response.ok) {
+                throw new Error('Login failed');
+            }
 
             // Handle successful login
             const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || '/';

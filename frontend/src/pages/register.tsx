@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/router';
+import { fetchFromAPI } from '../utils/communication';
 
 const Login: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -9,29 +10,28 @@ const Login: React.FC = () => {
     const router = useRouter();
     const csrfFetched = useRef(false); // Prevent duplicate requests
 
-    const getCookie = (name: string) => {
-        return Object.fromEntries(document.cookie.split(";").map(c => c.split("=")))[name];
-    };
-
-    useEffect(() => {
-        if (csrfFetched.current) return; // Prevent duplicate fetch
-        csrfFetched.current = true;
-
-        fetch('http://localhost:8080/csft', { credentials: 'include' })
-            .catch(err => console.error("CSRF Fetch Error:", err));
-    }, []);
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         try {
 
-            let token = getCookie("x_csft"); // Read latest CSRF token
+            try {
+                await fetchFromAPI('/users/available/username', { method: 'POST', body: JSON.stringify({ username: username }) })
+            } catch (err) {
+                throw new Error('Username already taken');
+            }
 
-            const response = await fetch('http://localhost:8080/create-user', {
+            try {
+                await fetchFromAPI('/users/available/email', { method: 'POST', body: JSON.stringify({ email: email }) })
+            } catch (err) {
+                throw new Error('Email already taken');
+            }
+
+
+            const response = await fetch('http://localhost:8080/users/create-user', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x_csft': token // Use latest token
                 },
                 credentials: 'include',
                 body: JSON.stringify({
@@ -50,7 +50,8 @@ const Login: React.FC = () => {
             const redirectUrl = sessionStorage.getItem('redirectAfterRegistration') || '/';
             router.push(redirectUrl);
         } catch (err) {
-            setError('Registration failed.');
+
+            setError('Registration failed: ' + (err as Error).message);
         }
     };
 
@@ -91,9 +92,10 @@ const Login: React.FC = () => {
                     </div>
                     <div>
                         <p className="block text-sm text-center">
+                            If you already have an account {' '}
                             <a href="/login" className="text-indigo-600 hover:text-indigo-800">
                                 Login
-                            </a>{' '}
+                            </a>.
 
                         </p>
                     </div>

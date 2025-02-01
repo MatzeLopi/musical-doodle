@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { fetchFromAPI } from '../utils/communication';
 
 const LogoutButton = () => {
     const [loading, setLoading] = useState(false);
@@ -10,10 +11,7 @@ const LogoutButton = () => {
         setError(null);
         setSuccess(null);
         try {
-            const response = await fetch(`http://localhost:8000/logout`, {
-                method: 'POST',
-                credentials: 'include',
-            });
+            const response = await fetchFromAPI("/logout");
             if (!response.ok) {
                 throw new Error('Logout failed');
             }
