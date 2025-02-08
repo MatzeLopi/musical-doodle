@@ -25,6 +25,9 @@ pub enum Error {
 
     #[error("conflict, resource already exists")]
     Conflict,
+
+    #[error("Bad Request")]
+    BadRequest,
 }
 
 impl Error {
@@ -36,6 +39,7 @@ impl Error {
             Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Sqlx(_) | Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Conflict => StatusCode::CONFLICT,
+            Self::BadRequest => StatusCode::BAD_REQUEST,
         }
     }
 }
