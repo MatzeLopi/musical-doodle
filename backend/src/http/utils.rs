@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use std::path::Path;
 use std::process::Command;
+use std::sync::Arc;
 
 use crate::http::{error::Error as HTTPError, AppState};
 use anyhow::Error;
@@ -92,11 +92,14 @@ pub async fn send_mail(to: &str, subject: &str, html: &str, state: &AppState) ->
 }
 
 pub fn to_aa_lc(input_path: &Path) -> Result<String, HTTPError> {
-// Get the file extension and output file path
-    let output_path = input_path.with_extension("m4a");  // AAC LC is often stored as .m4a
+    // Get the file extension and output file path
+    let output_path = input_path.with_extension("m4a"); // AAC LC is often stored as .m4a
 
     // FFmpeg command to convert to AAC LC
-    let output_path_str = output_path.to_str().unwrap().to_string();
+    let output_path_str = output_path
+        .to_str()
+        .unwrap_or(Err(HTTPError::InternalServerError)?)
+        .to_string();
     let status = Command::new("ffmpeg")
         .arg("-i")
         .arg(input_path)
@@ -105,15 +108,15 @@ pub fn to_aa_lc(input_path: &Path) -> Result<String, HTTPError> {
         .arg("-profile:a")
         .arg("aac_low")
         .arg("-b:a")
-        .arg("128k") 
+        .arg("128k")
         .arg("-f")
-        .arg("adts")  
+        .arg("adts")
         .arg(output_path_str.clone())
         .status();
 
     match status {
         Ok(status) if status.success() => Ok(output_path_str), // Success, return the output path
-        Ok(_) => Err(HTTPError::InternalServerError), // Conversion failed
-        Err(_) => Err(HTTPError::InternalServerError), // Error executing command
+        Ok(_) => Err(HTTPError::InternalServerError),          // Conversion failed
+        Err(_) => Err(HTTPError::InternalServerError),         // Error executing command
     }
 }
