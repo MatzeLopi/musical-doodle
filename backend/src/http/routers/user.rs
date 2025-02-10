@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/create-user", post(create_user))
+        .route("/users/create-user", post(create_user))
         .route("/users/delete-user", delete(delete_user))
         .route("/users/me", get(me))
         .route("/users/me/update-password", post(update_password))
@@ -71,11 +71,11 @@ async fn username_available(
     username: String,
 ) -> Result<impl IntoResponse, HTTPError> {
     match crud::user::check_username(&username, &state.db).await {
-        true => {
+        false => {
             log::debug!("Username is available");
             Ok(StatusCode::OK)
         }
-        false => Ok({
+        true => Ok({
             log::debug!("Username is taken");
             StatusCode::CONFLICT
         }),
@@ -87,11 +87,11 @@ async fn email_available(
     email: String,
 ) -> Result<impl IntoResponse, HTTPError> {
     match crud::user::check_email(&email, &state.db).await {
-        true => {
+        false => {
             log::debug!("Email is available");
             Ok(StatusCode::OK)
         }
-        false => {
+        true => {
             log::debug!("Email is taken");
             Ok(StatusCode::CONFLICT)
         }

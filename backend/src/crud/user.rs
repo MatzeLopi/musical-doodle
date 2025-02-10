@@ -115,8 +115,14 @@ pub async fn check_username(username: &str, db: &PgPool) -> bool {
         .await;
 
     match result {
-        Ok(_) => true,
-        Err(_) => false,
+        Ok(result) => {
+            log::debug!("Username exists: {:?}", result);
+            true
+        }
+        Err(e) => {
+            log::debug!("Error Checking Username: {:?}", e);
+            false
+        }
     }
 }
 
@@ -134,8 +140,14 @@ pub async fn check_email(email: &str, db: &PgPool) -> bool {
         .await;
 
     match result {
-        Ok(_) => true,
-        Err(_) => false,
+        Ok(result) => {
+            log::debug!("Email exists: {:?}", result);
+            true
+        }
+        Err(e) => {
+            log::error!("Error Checking Email: {:?}", e);
+            false
+        }
     }
 }
 
@@ -154,14 +166,11 @@ pub async fn create_user(
     ///
     /// # Returns
     ///  Result<(), HTTPError> - The result of the operation
+    log::debug!("Creating user: {} {}", username, email);
     let db = &state.db;
 
     let uid = Uuid::new_v4();
     let verification_token = random_string(8);
-
-    if check_username(username, db).await || check_email(email, db).await {
-        return Err(HTTPError::Conflict);
-    }
 
     let result = sqlx::query!(
         "INSERT INTO users (user_id, username, email, password_hash, verification_token, is_verified) VALUES ($1, $2, $3, $4, $5 , true)",
@@ -180,8 +189,14 @@ pub async fn create_user(
     ));
 
     match result {
-        Ok(_) => Ok(()),
-        Err(e) => Err(HTTPError::from(e)),
+        Ok(_) => {
+            log::debug!("User successfully created in DB");
+            Ok(())
+        }
+        Err(e) => {
+            log::error!("Error creating user: {:?}", e);
+            Err(HTTPError::from(e))
+        }
     }
 }
 
@@ -200,7 +215,10 @@ pub async fn delete_user(uid: &Uuid, db: &PgPool) -> Result<(), HTTPError> {
         .await;
     match result {
         Ok(_) => Ok(()),
-        Err(e) => Err(HTTPError::from(e)),
+        Err(e) => {
+            log::error!("Error deleting user: {:?}", e);
+            Err(HTTPError::from(e))
+        }
     }
 }
 pub async fn get_hash(username: &str, db: &PgPool) -> Result<(Uuid, String), sqlx::Error> {

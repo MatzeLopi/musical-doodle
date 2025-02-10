@@ -74,8 +74,6 @@ async fn create_category(
 }
 
 async fn to_backblaze(file_path: &Path) -> Result<String, HTTPError> {
-    let client = Client::new();
-
     todo!()
 }
 

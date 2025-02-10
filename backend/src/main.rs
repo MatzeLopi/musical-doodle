@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Create DB pool
     let db = PgPoolOptions::new()
-        .max_connections(22)
+        .max_connections(15) // Max connections to DB
         .connect(&config.database_url)
         .await
         .context("could not connect to database_url")?;
