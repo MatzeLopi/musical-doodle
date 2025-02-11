@@ -11,6 +11,7 @@ use axum::{
     response::IntoResponse,
     routing::{delete, get, post, Router},
 };
+use s3::{bucket::Bucket, creds::Credentials, region::Region};
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -19,6 +20,7 @@ use tempfile::NamedTempFile;
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
+use chrono::{Datelike, Utc};
 use tokio::task::spawn_blocking;
 
 pub fn router(state: Arc<AppState>) -> Router {
@@ -31,6 +33,8 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/sound/update/set_public", post(set_public))
         .route("/sound/update/description", post(update_description))
         .route("/sound/update/title", post(update_title))
+        .route("/sound/update/tags", post(update_tags))
+        .route("/sound/update/category", post(update_category))
         .route("/sound/tags", get(get_tags))
         .route("/sound/tags/create", post(create_tag))
         .route("/sound/categories", get(get_categories))
@@ -73,8 +77,42 @@ async fn create_category(
     Ok(StatusCode::CREATED)
 }
 
-async fn to_backblaze(file_path: &Path) -> Result<String, HTTPError> {
-    todo!()
+async fn to_backblaze(file_path: &Path, state: &AppState) -> Result<String, HTTPError> {
+    let region = Region::Custom {
+        region: state.config.s3_region.clone(),
+        endpoint: state.config.s3_url.clone(),
+    };
+    let file_name = format!("{}_{}.m4a", Utc::now().year(), Uuid::new_v4().simple());
+    let credentials = Credentials::new(Some(&state.config.s3_secret), None, None, None, None)
+        .map_err(|e| {
+            log::error!("Error creating credentials: {:?}", e);
+            HTTPError::InternalServerError
+        })?;
+    let bucket = Bucket::new(&state.config.s3_bucket, region, credentials).map_err(|e| {
+        log::error!("Error creating bucket: {:?}", e);
+        HTTPError::InternalServerError
+    })?;
+
+    let mut file = File::open(file_path).await.map_err(|e| {
+        log::error!("Error opening file {:?}", e);
+        HTTPError::InternalServerError
+    })?;
+
+    let stream_resp = bucket
+        .put_object_stream(&mut file, &file_name)
+        .await
+        .map_err(|e| {
+            log::error!("Error in multipart stream {:?}", e);
+            HTTPError::InternalServerError
+        })?;
+
+    match stream_resp.status_code() {
+        200 => Ok(file_name),
+        code => {
+            log::error!("Error in stream upload, status code: {:?}", code);
+            Err(HTTPError::InternalServerError)
+        }
+    }
 }
 
 async fn upload(
@@ -83,7 +121,10 @@ async fn upload(
     mut file: Multipart,
 ) -> Result<impl IntoResponse, HTTPError> {
     // Get full file
-    let mut temp_file = NamedTempFile::new().map_err(|_| HTTPError::InternalServerError)?;
+    let temp_file = NamedTempFile::new().map_err(|e| {
+        log::error!("Error creating temp file: {:?}", e);
+        HTTPError::InternalServerError
+    })?;
     let mut maybe_metadata: Option<UploadAudio> = None;
     let mut file_name = String::new();
 
@@ -101,24 +142,21 @@ async fn upload(
                 maybe_metadata =
                     serde_json::from_slice(&metadata_bytes).map_err(|_| HTTPError::BadRequest)?;
             } else if name == "file" {
-                file_name = field
-                    .file_name()
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| "audio.mp3".to_string());
+                file_name = Uuid::new_v4().simple().to_string();
                 let save_path = PathBuf::from(format!("/path/to/storage/{file_name}"));
-                let mut file_writer = File::create(&save_path)
-                    .await
-                    .map_err(|_| HTTPError::InternalServerError)?;
+                let mut file_writer = File::create(&save_path).await.map_err(|e| {
+                    log::error!("Error creating file: {:?}", e);
+                    HTTPError::InternalServerError
+                })?;
 
-                while let Some(chunk) = field
-                    .chunk()
-                    .await
-                    .map_err(|_| HTTPError::InternalServerError)?
-                {
-                    file_writer
-                        .write_all(&chunk)
-                        .await
-                        .map_err(|_| HTTPError::InternalServerError)?;
+                while let Some(chunk) = field.chunk().await.map_err(|e| {
+                    log::error!("Error reading chunk: {:?}", e);
+                    HTTPError::InternalServerError
+                })? {
+                    file_writer.write_all(&chunk).await.map_err(|e| {
+                        log::error!("Error writing file {:?}", e);
+                        HTTPError::InternalServerError
+                    })?;
                 }
             }
         }
@@ -131,7 +169,8 @@ async fn upload(
         .map_err(|_| HTTPError::InternalServerError)??;
 
     // Upload file to B2 Backblaze
-    let file_loc = to_backblaze(&Path::new(&aac_lc_file)).await?;
+    todo!("Change this to handler -> Long running -> Status can be queried by user.");
+    let file_loc = to_backblaze(&Path::new(&aac_lc_file), &state).await?;
 
     // Save to database
     let audio_file = Audio {
