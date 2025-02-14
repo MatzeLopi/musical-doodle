@@ -26,30 +26,6 @@ pub struct Audio {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UploadAudio {
-    pub title: String,
-    pub description: String,
-    pub category: Category,
-    pub tags: Vec<Tag>,
-    pub private: bool,
-}
-
-impl UploadAudio {
-    pub fn default() -> Self {
-        Self {
-            title: "".to_string(),
-            description: "".to_string(),
-            category: Category {
-                id: Uuid::new_v4(),
-                name: "".to_string(),
-            },
-            tags: vec![],
-            private: false,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateDescription {
     pub id: Uuid,
     pub description: String,

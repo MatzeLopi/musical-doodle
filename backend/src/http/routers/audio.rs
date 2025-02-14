@@ -3,32 +3,28 @@ use crate::{
     http::{dependencies, error::Error as HTTPError, utils, AppState},
     schemas::audios::{
         Audio, Category, Tag, UpdateCategory, UpdateDescription, UpdateTags, UpdateTitle,
-        UploadAudio,
     },
 };
 use axum::{
-    body::Bytes,
-    extract::{Json, Multipart, State},
+    extract::{Json, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get, post, Router},
-    BoxError,
 };
-use futures::{Stream, TryStreamExt};
 use s3::{bucket::Bucket, creds::Credentials, region::Region};
-use std::{path::Path, sync::Arc};
+use std::{fs::create_dir_all, path::Path, sync::Arc};
 use tokio::{
     fs::{remove_file, File},
-    io::BufWriter,
-    io::Error as IoError,
-    io::ErrorKind as IoErrorKind,
+    io::AsyncWriteExt,
 };
-use tokio_util::io::StreamReader;
 use uuid::Uuid;
 
 use tokio::task::spawn_blocking;
 
+const UPLOAD_DIR: &str = "temp";
+
 pub fn router(state: Arc<AppState>) -> Router {
+    create_dir_all(UPLOAD_DIR).unwrap();
     Router::new()
         .route("/sound/my_audios", get(get_my_audios))
         .route("/sound/{username}", get(get_audio))
@@ -83,19 +79,41 @@ async fn create_category(
 }
 
 async fn to_backblaze(file_path: &Path, state: &AppState, id: Uuid) -> Result<String, HTTPError> {
+    log::debug!("Uploading to backblaze...");
     let region = Region::Custom {
         region: state.config.s3_region.clone(),
         endpoint: state.config.s3_url.clone(),
     };
-    let credentials = Credentials::new(Some(&state.config.s3_secret), None, None, None, None)
-        .map_err(|e| {
+
+    log::debug!("Region: {:?}", region);
+
+    audio::update_status(&state.db, id, audio::AudioStatus::Uploading).await?;
+    let credentials = match Credentials::new(
+        Some(&state.config.s3_access_key),
+        Some(&state.config.s3_secret_key),
+        None,
+        None,
+        None,
+    ) {
+        Ok(credentials) => credentials,
+        Err(e) => {
             log::error!("Error creating credentials: {:?}", e);
-            HTTPError::InternalServerError
-        })?;
-    let bucket = Bucket::new(&state.config.s3_bucket, region, credentials).map_err(|e| {
-        log::error!("Error creating bucket: {:?}", e);
-        HTTPError::InternalServerError
-    })?;
+            audio::update_status(&state.db, id, audio::AudioStatus::Failed).await?;
+            return Err(HTTPError::InternalServerError);
+        }
+    };
+    log::debug!("Credentials created");
+
+    let bucket = match Bucket::new(&state.config.s3_bucket, region, credentials) {
+        Ok(bucket) => bucket,
+        Err(e) => {
+            log::error!("Error creating bucket: {:?}", e);
+            audio::update_status(&state.db, id, audio::AudioStatus::Failed).await?;
+            return Err(HTTPError::InternalServerError);
+        }
+    };
+
+    log::debug!("Bucket created");
 
     let mut file = File::open(file_path).await.map_err(|e| {
         log::error!("Error opening file {:?}", e);
@@ -110,21 +128,27 @@ async fn to_backblaze(file_path: &Path, state: &AppState, id: Uuid) -> Result<St
             return Err(HTTPError::InternalServerError);
         }
     };
-    let stream_resp = bucket
-        .put_object_stream(&mut file, file_name)
-        .await
-        .map_err(|e| {
-            log::error!("Error in multipart stream {:?}", e);
 
-            HTTPError::InternalServerError
-        })?;
+    log::debug!("File opened");
+
+    let stream_resp = match bucket.put_object_stream(&mut file, file_name).await {
+        Ok(resp) => resp,
+        Err(e) => {
+            log::error!("Error putting object stream: {:?}", e);
+            audio::update_status(&state.db, id, audio::AudioStatus::Failed).await?;
+
+            return Err(HTTPError::InternalServerError);
+        }
+    };
+
+    log::debug!("Stream response: {:?}", stream_resp);
 
     match stream_resp.status_code() {
         code if code < 300 && code >= 200 => {
             _ = remove_file(file_path).await.map_err(|e| {
                 log::error!("Error removing {:?}: {:?}", file_path, e);
             });
-            audio::update_status(&state.db, id, audio::AudioStatus::Completed).await?;
+            audio::update_status(&state.db, id, audio::AudioStatus::Complete).await?;
             Ok(file_name.to_string())
         }
         code => {
@@ -136,123 +160,69 @@ async fn to_backblaze(file_path: &Path, state: &AppState, id: Uuid) -> Result<St
     }
 }
 
-// Save a `Stream` to a file
-async fn stream_to_file<S, E>(path: &str, stream: S) -> Result<(), (StatusCode, String)>
-where
-    S: Stream<Item = Result<Bytes, E>>,
-    E: Into<BoxError>,
-{
-    if !path_is_valid(path) {
-        return Err((StatusCode::BAD_REQUEST, "Invalid path".to_string()));
-    }
-
-    async {
-        // Convert the stream into an `AsyncRead`.
-        let body_with_io_error = stream.map_err(|err| {
-            log::error!("Error reading body");
-            IoError::new(IoErrorKind::Other, err)
-        });
-        let body_reader = StreamReader::new(body_with_io_error);
-        futures::pin_mut!(body_reader);
-
-        // Create the file. `File` implements `AsyncWrite`.
-        let path = std::path::Path::new("/temp").join(path);
-        let mut file = BufWriter::new(File::create(path).await?);
-
-        // Copy the body into the file.
-        tokio::io::copy(&mut body_reader, &mut file).await?;
-
-        Ok::<_, IoError>(())
-    }
-    .await
-    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))
-}
-
-// to prevent directory traversal attacks we ensure the path consists of exactly one normal
-// component
-fn path_is_valid(path: &str) -> bool {
-    let path = std::path::Path::new(path);
-    let mut components = path.components().peekable();
-
-    if let Some(first) = components.peek() {
-        if !matches!(first, std::path::Component::Normal(_)) {
-            return false;
-        }
-    }
-
-    components.count() == 1
-}
-
 async fn upload(
     State(state): State<Arc<AppState>>,
     auth_user: dependencies::AuthUser,
-    mut multipart: Multipart,
+    audio: dependencies::AudioUpload,
 ) -> Result<impl IntoResponse, HTTPError> {
-    // Get full file
-    let mut file_name: Option<String> = None;
-    let mut metadata = UploadAudio::default();
+    log::debug!("Upload request...");
 
-    while let Ok(Some(field)) = multipart.next_field().await {
-        let name = field.name().unwrap_or("").to_string();
-
-        if name == "file" {
-            if let Some(name) = field.file_name() {
-                file_name = Some(name.to_owned());
+    let file_ext = match audio.filename {
+        Some(ref name) => {
+            let parts: Vec<&str> = name.split('.').collect();
+            if parts.len() > 1 {
+                parts[parts.len() - 1]
             } else {
-                continue;
-            }
-            stream_to_file(file_name.as_ref().unwrap(), field).await;
-        } else {
-            // Extract metadata fields
-            let value = field.text().await.map_err(|_| HTTPError::BadRequest)?;
-            match name.as_str() {
-                "title" => metadata.title = value,
-                "description" => metadata.description = value,
-                "category" => {
-                    let category: Category =
-                        serde_json::from_str(&value).map_err(|_| HTTPError::BadRequest)?;
-                    metadata.category = category;
-                }
-                "tags" => {
-                    let tags: Vec<Tag> =
-                        serde_json::from_str(&value).map_err(|_| HTTPError::BadRequest)?;
-                    metadata.tags = tags;
-                }
-                "private" => {
-                    metadata.private = value.parse::<bool>().unwrap_or(false);
-                }
-                _ => {}
+                "mp3"
             }
         }
-    }
-
-    let file_name = match file_name {
-        Some(file_name) => file_name,
-        None => return Err(HTTPError::BadRequest),
+        None => "mp3",
     };
+
+    let file_name = format!("{}/{}.{}", UPLOAD_DIR, Uuid::new_v4(), file_ext);
+
+    // Save file to disk
+    let mut file = File::create(&file_name).await.map_err(|e| {
+        log::error!("Error creating file: {:?}", e);
+        HTTPError::InternalServerError
+    })?;
+    file.write_all(&audio.bytes).await.map_err(|e| {
+        log::error!("Error writing to file: {:?}", e);
+        HTTPError::InternalServerError
+    })?;
+    log::debug!("File saved to disk");
     // Convert file to AAC LC format
     let aac_lc_file = spawn_blocking(move || utils::to_aa_lc(&file_name))
         .await
-        .map_err(|_| HTTPError::InternalServerError)??;
+        .map_err(|e| {
+            log::error!("Error converting to AAC LC: {:?}", e);
+            HTTPError::InternalServerError
+        })??;
 
     // Save to database
-    let audio_ud = Uuid::new_v4();
+    let audio_ud: Uuid = Uuid::new_v4();
+
     let audio_file = Audio {
         id: audio_ud.clone(),
-        title: metadata.title,
+        title: audio.title.unwrap_or("Untitled".to_string()),
         creator: auth_user.user_id,
-        description: metadata.description,
+        description: audio.description.unwrap_or("".to_string()),
         audio_url: aac_lc_file.clone(),
-        private: metadata.private,
-        category: metadata.category,
-        tags: metadata.tags,
+        private: audio.private.unwrap_or(true),
+        category: Category {
+            id: Uuid::nil(),
+            name: "General".to_string(),
+        },
+        tags: vec![Tag {
+            id: Uuid::nil(),
+            name: "General".to_string(),
+        }],
     };
 
     audio::upload(&state.db, &audio_file).await?;
 
     // Upload file to B2 Backblaze
-
-    let upload_result = tokio::task::spawn(async move {
+    _ = tokio::task::spawn(async move {
         to_backblaze(&Path::new(&aac_lc_file), &state, audio_ud).await
     });
 

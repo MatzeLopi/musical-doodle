@@ -1,12 +1,19 @@
 // External Crates
-use crate::crud;
+use crate::{
+    crud,
+    schemas::audios::{Category, Tag},
+};
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
 use axum::{
-    extract::FromRequestParts,
-    http::{header::COOKIE, request::Parts},
+    body::Bytes,
+    extract::{FromRequest, FromRequestParts, Multipart, Request},
+    http::{
+        header::{CONTENT_TYPE, COOKIE},
+        request::Parts,
+    },
 };
 use axum_extra::extract::cookie::CookieJar;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
@@ -91,7 +98,10 @@ impl AuthUser {
         );
 
         match token {
-            Ok(token) => Ok(token),
+            Ok(token) => {
+                log::debug!("Token generated successfully");
+                Ok(token)
+            }
             Err(e) => {
                 log::debug!("Failed to encode token: {:?}", e);
                 Err(HTTPError::InternalServerError)
@@ -207,5 +217,93 @@ where
         }
 
         Ok(Self(None))
+    }
+}
+
+#[derive(Debug)]
+pub struct AudioUpload {
+    pub filename: Option<String>,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub category: Option<String>,
+    pub tags: Vec<String>,
+    pub private: Option<bool>,
+    pub bytes: Bytes,
+}
+
+impl<S> FromRequest<S> for AudioUpload
+where
+    S: Send + Sync,
+{
+    type Rejection = HTTPError;
+
+    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+        let Some(content_type) = req.headers().get(CONTENT_TYPE) else {
+            return Err(HTTPError::BadRequest);
+        };
+
+        if content_type.to_str().unwrap().starts_with("multipart/") {
+            let mut multipart = Multipart::from_request(req, state).await.map_err(|e| {
+                log::error!("Failed to parse multipart: {:?}", e);
+                HTTPError::InternalServerError
+            })?;
+
+            let mut filename = None;
+            let mut title = None;
+            let mut description = None;
+            let mut category = None;
+            let mut tags = Vec::new();
+            let mut private = None;
+            let mut file_bytes = Bytes::new();
+
+            while let Some(field) = multipart
+                .next_field()
+                .await
+                .map_err(|_| HTTPError::BadRequest)?
+            {
+                let name = field.name().unwrap_or_default().to_string();
+
+                match name.as_str() {
+                    "file" => {
+                        filename = field.file_name().map(|s| s.to_string());
+                        file_bytes = field
+                            .bytes()
+                            .await
+                            .map_err(|_| HTTPError::InternalServerError)?;
+                    }
+                    "title" => {
+                        title = Some(field.text().await.map_err(|_| HTTPError::BadRequest)?);
+                    }
+                    "description" => {
+                        description = Some(field.text().await.map_err(|_| HTTPError::BadRequest)?);
+                    }
+                    "category" => {
+                        category = Some(field.text().await.map_err(|_| HTTPError::BadRequest)?);
+                    }
+                    "tags" => {
+                        let tag_text = field.text().await.map_err(|_| HTTPError::BadRequest)?;
+                        tags = tag_text.split(',').map(|s| s.trim().to_string()).collect();
+                    }
+                    "private" => {
+                        private = field.text().await.ok().map(|v| v == "true");
+                    }
+                    _ => {
+                        log::warn!("Unknown field: {}", name);
+                    }
+                }
+            }
+
+            Ok(Self {
+                filename,
+                title,
+                description,
+                category,
+                tags,
+                private,
+                bytes: file_bytes,
+            })
+        } else {
+            Err(HTTPError::BadRequest)
+        }
     }
 }

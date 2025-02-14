@@ -9,11 +9,11 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "audio_status", rename_all = "lowercase")]
+#[sqlx(type_name = "track_status", rename_all = "lowercase")]
 pub enum AudioStatus {
     Pending,
     Uploading,
-    Completed,
+    Complete,
     Failed,
 }
 
@@ -29,7 +29,10 @@ pub async fn update_status(
         audio_id
     )
     .execute(db)
-    .map_err(HTTPError::from)
+    .map_err(|e| {
+        log::error!("Error updating status: {:?}", e);
+        HTTPError::InternalServerError
+    })
     .await?;
 
     // Check the result and return appropriate response
@@ -109,16 +112,22 @@ pub async fn create_category(db: &PgPool, category: String) -> Result<(), HTTPEr
 
 pub async fn upload(db: &PgPool, audio: &Audio) -> Result<(), HTTPError> {
     let result = sqlx::query!(
-        "INSERT INTO tracks (title, creator_id, description, audio_url, category_id) VALUES ($1, $2, $3, $4, $5)",
-        audio.title,
+        "INSERT INTO tracks (track_id,  creator_id, title, description, audio_url, category_id) VALUES ($1, $2, $3, $4, $5, $6)",
+        audio.id,
         audio.creator,
+        audio.title,
         audio.description,
         audio.audio_url,
         audio.category.id
-    ).execute(db).map_err(HTTPError::from).await?;
+    ).execute(db).map_err(|e|{
+        log::error!("Error uploading audio: {:?}", e);
+        HTTPError::InternalServerError}).await?;
     match result.rows_affected() {
         1 => Ok(()),
-        _ => Err(HTTPError::InternalServerError),
+        count => {
+            log::debug!("Expected 1 row affected, got {}", count);
+            Err(HTTPError::InternalServerError)
+        }
     }
 }
 
