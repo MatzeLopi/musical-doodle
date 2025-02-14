@@ -4,8 +4,40 @@ use crate::{
 };
 use futures::TryFutureExt;
 use itertools;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
+
+#[derive(Debug, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "audio_status", rename_all = "lowercase")]
+pub enum AudioStatus {
+    Pending,
+    Uploading,
+    Completed,
+    Failed,
+}
+
+pub async fn update_status(
+    db: &PgPool,
+    audio_id: Uuid,
+    status: AudioStatus,
+) -> Result<(), HTTPError> {
+    // Update the status in the database
+    let result = sqlx::query!(
+        "UPDATE tracks SET status = $1 WHERE track_id = $2",
+        status as AudioStatus,
+        audio_id
+    )
+    .execute(db)
+    .map_err(HTTPError::from)
+    .await?;
+
+    // Check the result and return appropriate response
+    match result.rows_affected() {
+        1 => Ok(()),
+        _ => Err(HTTPError::InternalServerError),
+    }
+}
 
 pub async fn get_tags(db: &PgPool) -> Result<Vec<Tag>, HTTPError> {
     let result = sqlx::query!("SELECT * FROM tags")

@@ -91,8 +91,9 @@ pub async fn send_mail(to: &str, subject: &str, html: &str, state: &AppState) ->
     Ok(())
 }
 
-pub fn to_aa_lc(input_path: &Path) -> Result<String, HTTPError> {
+pub fn to_aa_lc(input_path: &str) -> Result<String, HTTPError> {
     // Get the file extension and output file path
+    let input_path = Path::new("/temp").join(input_path);
     let output_path = input_path.with_extension("m4a"); // AAC LC is often stored as .m4a
 
     // FFmpeg command to convert to AAC LC
