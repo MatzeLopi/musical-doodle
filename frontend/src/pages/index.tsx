@@ -21,7 +21,7 @@ const Home: NextPage = () => {
   // Fetching data when the button is clicked
   const HandleClick = async (endpoint: string) => {
     try {
-      let data = await fetchFromAPI(endpoint);
+      let data = await fetchFromAPI(endpoint, {}, "application/json");
       setData(await data.json());
     } catch (error) {
       console.error(error);

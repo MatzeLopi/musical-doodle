@@ -1,19 +1,29 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
 
-export async function fetchFromAPI(endpoint: string, options: RequestInit = {}) {
-    const csrfToken = getCookie('x_csft') || ''; // Default to an empty string if undefined
+export async function fetchFromAPI(
+    endpoint: string,
+    options: RequestInit = {},
+    contentType: null | string = null,
+) {
+    const csrfToken = getCookie("x_csft") || ""; // Get CSRF token
 
-    // Ensure the default options are correctly merged
+    // Ensure headers object exists
+    const headers: HeadersInit = new Headers(options.headers || {});
+
+    headers.set("x_csft", csrfToken); // Add CSRF token
+
+    // If it's not a multipart request, set JSON content type
+    if (contentType != null) {
+        headers.set("Content-Type", contentType);
+    }
+
     const defaultOptions: RequestInit = {
-        credentials: 'include', // This is to include cookies with the request
-        headers: {
-            'Content-Type': 'application/json',
-            'x_csft': csrfToken, // Now csrfToken is always a string
-            ...options.headers,
-        },
+        credentials: "include", // Include cookies in requests
+        headers,
         ...options,
     };
 
+    // Fetch API request
     const response = await fetch(`${BASE_URL}${endpoint}`, defaultOptions);
 
     return response;

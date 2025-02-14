@@ -8,24 +8,6 @@ const Login: React.FC = () => {
     const [error, setError] = useState('');
     const router = useRouter();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await fetchFromAPI('/token/get', { method: 'POST', body: JSON.stringify({ password: "", username: "" }) });
-                console.log(response.status)
-                if (response.status == 302) {
-                    const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || '/';
-                    router.push(redirectUrl); // Redirect to the saved URL or homepage
-                }
-            } catch (err) {
-                console.log(err)
-            }
-
-            // Perform any action you want on page load
-        };
-        fetchData();
-    }, []);
-
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         try {

@@ -201,3 +201,22 @@ target/
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+
+
+# Music files
+*.mp3
+*.flac
+*.wav
+*.aiff
+*.aif
+*.m4a
+*.aac
+*.ogg
+*.wma
+*.aax
+*.ra
+*.mid
+*.midi
+*.mka
+*.opus
+*.webm
