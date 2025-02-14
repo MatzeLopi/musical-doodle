@@ -1,5 +1,18 @@
 use serde::{Deserialize, Serialize};
+use tokio_util::bytes::Bytes;
 use uuid::Uuid;
+
+#[derive(Debug)]
+pub struct AudioUpload {
+    pub filename: Option<String>,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub category: Option<Category>,
+    pub tags: Vec<Tag>,
+    pub private: Option<bool>,
+
+    pub bytes: Bytes,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Category {

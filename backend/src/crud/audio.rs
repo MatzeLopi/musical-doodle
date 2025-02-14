@@ -122,6 +122,21 @@ pub async fn upload(db: &PgPool, audio: &Audio) -> Result<(), HTTPError> {
     ).execute(db).map_err(|e|{
         log::error!("Error uploading audio: {:?}", e);
         HTTPError::InternalServerError}).await?;
+
+    for tag in &audio.tags {
+        _ = sqlx::query!(
+            "INSERT INTO track_tags (track_id, tag_id) VALUES ($1, $2)",
+            audio.id,
+            tag.id
+        )
+        .execute(db)
+        .map_err(|e| {
+            log::error!("Error uploading audio: {:?}", e);
+            HTTPError::InternalServerError
+        })
+        .await?;
+    }
+
     match result.rows_affected() {
         1 => Ok(()),
         count => {
