@@ -4,7 +4,7 @@ use crate::{
     schemas::users::NewUser,
 };
 use axum::{
-    extract::{Form, Json, Path, State},
+    extract::{Json, Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get, post, Router},

@@ -1,17 +1,28 @@
 use serde::{Deserialize, Serialize};
-use tokio_util::bytes::Bytes;
 use uuid::Uuid;
 
-#[derive(Debug)]
-pub struct AudioUpload {
-    pub filename: Option<String>,
-    pub title: Option<String>,
-    pub description: Option<String>,
-    pub category: Option<Category>,
-    pub tags: Vec<Tag>,
-    pub private: Option<bool>,
+#[derive(prost::Message)]
+pub struct UploadChunk {
+    #[prost(string, tag = "1")]
+    pub id: String,
+    #[prost(int32, tag = "2")]
+    pub chunk_number: i32,
+    #[prost(bytes, tag = "3")]
+    pub chunk: Vec<u8>,
+    #[prost(string, tag = "4")]
+    pub ext: String,
+}
 
-    pub bytes: Bytes,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UploadAudioMetadata {
+    pub id: Option<Uuid>,
+    pub title: String,
+    pub ext: String,
+    pub description: String,
+    pub category: Category,
+    pub tags: Vec<Tag>,
+    pub private: bool,
+    pub total_chunks: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

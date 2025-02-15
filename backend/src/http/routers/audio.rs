@@ -1,27 +1,37 @@
 use crate::{
-    crud::audio,
+    crud::audio::{self, AudioStatus},
     http::{dependencies, error::Error as HTTPError, utils, AppState},
     schemas::audios::{
-        Audio, AudioUpload, Category, Tag, UpdateCategory, UpdateDescription, UpdateTags,
-        UpdateTitle,
+        Audio, Category, Tag, UpdateCategory, UpdateDescription, UpdateTags, UpdateTitle,
+        UploadAudioMetadata, UploadChunk,
     },
 };
 use axum::{
-    extract::{Json, Multipart, State},
+    extract::{Json, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get, post, Router},
 };
+use axum_extra::protobuf::Protobuf;
 use chrono::Datelike;
+use once_cell::sync::Lazy;
 use s3::{bucket::Bucket, creds::Credentials, region::Region};
-use std::{fs::create_dir_all, path::Path, sync::Arc};
-use tokio::task::spawn_blocking;
+use std::{collections::HashMap, fs::create_dir_all, path::PathBuf, sync::Arc};
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use tokio::task::spawn_blocking; // For the lazy initialization of the lock map
+
 use tokio::{
     fs::{remove_file, File},
     io::AsyncWriteExt,
+    sync::{Mutex, RwLock},
 };
-use tokio_util::bytes::BytesMut;
 use uuid::Uuid;
+
+static FILE_LOCKS: Lazy<RwLock<HashMap<Uuid, Mutex<()>>>> =
+    Lazy::new(|| RwLock::new(HashMap::new())); // Use RwLock
+
+static CHUNK_COUNTERS: Lazy<RwLock<HashMap<Uuid, Mutex<u64>>>> =
+    Lazy::new(|| RwLock::new(HashMap::new()));
 
 const UPLOAD_DIR: &str = "temp";
 
@@ -81,7 +91,7 @@ async fn create_category(
 }
 
 async fn to_backblaze(
-    file_path: &Path,
+    file_path: PathBuf,
     state: &AppState,
     id: Uuid,
     s3_url: String,
@@ -122,7 +132,7 @@ async fn to_backblaze(
 
     log::debug!("Bucket created");
 
-    let mut file = File::open(file_path).await.map_err(|e| {
+    let mut file = File::open(&file_path).await.map_err(|e| {
         log::error!("Error opening file {:?}", e);
         HTTPError::InternalServerError
     })?;
@@ -143,7 +153,7 @@ async fn to_backblaze(
 
     match stream_resp.status_code() {
         code if code < 300 && code >= 200 => {
-            _ = remove_file(file_path).await.map_err(|e| {
+            _ = remove_file(&file_path).await.map_err(|e| {
                 log::error!("Error removing {:?}: {:?}", file_path, e);
             });
             audio::update_status(&state.db, id, audio::AudioStatus::Complete).await?;
@@ -158,151 +168,168 @@ async fn to_backblaze(
     }
 }
 
-todo!("Rework this and split in start, continue and finish handlers. Multipart is not what I thought it was.");
-async fn upload(
-    State(state): State<Arc<AppState>>,
+async fn start_upload(
     auth_user: dependencies::AuthUser,
-    mut multipart: Multipart,
+    State(state): State<Arc<AppState>>,
+    Json(metadata): Json<UploadAudioMetadata>,
 ) -> Result<impl IntoResponse, HTTPError> {
-    log::debug!("Upload request...");
+    let uid = Uuid::new_v4();
 
-    let mut filename = None;
-    let mut title = None;
-    let mut description = None;
-    let mut category = None;
-    let mut tags = Vec::new();
-    let mut private = Some(true);
-    let mut buffer = BytesMut::new();
-
-    while let Some(field) = multipart
-        .next_field()
-        .await
-        .map_err(|_| HTTPError::BadRequest)?
-    {
-        let name = field.name().unwrap_or_default().to_string();
-
-        match name.as_str() {
-            "file" => {
-                filename = field.file_name().map(|s| s.to_string());
-                let b = field.bytes().await.map_err(|e| {
-                    log::error!("Failed to read file bytes: {:?}", e);
-                    HTTPError::InternalServerError
-                })?;
-                buffer.extend_from_slice(&b);
-            }
-            "title" => {
-                title = Some(field.text().await.map_err(|e| {
-                    log::error!("Failed to read title: {:?}", e);
-                    HTTPError::BadRequest
-                })?);
-            }
-            "description" => {
-                description = Some(field.text().await.map_err(|e| {
-                    log::error!("Failed to read description: {:?}", e);
-                    HTTPError::BadRequest
-                })?);
-            }
-            "category" => {
-                let category_text = field.text().await.map_err(|e| {
-                    log::error!("Failed to read category: {:?}", e);
-                    HTTPError::BadRequest
-                })?;
-
-                category = serde_json::from_str(&category_text).map_err(|e| {
-                    log::error!("Failed to parse category JSON: {:?}", e);
-                    HTTPError::BadRequest
-                })?;
-            }
-            "tags" => {
-                let tags_text = field.text().await.map_err(|e| {
-                    log::error!("Failed to read tags: {:?}", e);
-                    HTTPError::BadRequest
-                })?;
-
-                tags = serde_json::from_str(&tags_text).map_err(|e| {
-                    log::error!("Failed to parse tags JSON: {:?}", e);
-                    HTTPError::BadRequest
-                })?;
-            }
-            "private" => {
-                private = field.text().await.ok().map(|v| v == "true");
-            }
-            _ => {
-                log::info!("Unknown field: {}", name);
-            }
-        }
-    }
-    let file_bytes = buffer.freeze();
-
-    let audio = AudioUpload {
-        filename,
-        title,
-        description,
-        category,
-        tags,
-        private,
-        bytes: file_bytes,
-    };
-
-    let file_ext = match audio.filename {
-        Some(ref name) => {
-            let parts: Vec<&str> = name.split('.').collect();
-            if parts.len() > 1 {
-                parts[parts.len() - 1]
-            } else {
-                "mp3"
-            }
-        }
-        None => "mp3",
-    };
-
-    let file_name = format!("{}/{}.{}", UPLOAD_DIR, Uuid::new_v4(), file_ext);
-
-    // Save file to disk
-    let mut file = File::create(&file_name).await.map_err(|e| {
+    _ = File::create(format!(
+        "{}/{}.{}",
+        UPLOAD_DIR,
+        uid.simple().to_string(),
+        metadata.ext
+    ))
+    .await
+    .map_err(|e| {
         log::error!("Error creating file: {:?}", e);
         HTTPError::InternalServerError
     })?;
-    file.write_all(&audio.bytes).await.map_err(|e| {
+
+    let s3_url = format!("{}/{}.m4a", chrono::Utc::now().year(), uid);
+
+    let audio = Audio {
+        id: uid,
+        title: metadata.title,
+        creator: auth_user.user_id,
+        description: metadata.description,
+        audio_url: s3_url,
+        private: metadata.private,
+        category: metadata.category,
+        tags: metadata.tags,
+    };
+
+    audio::upload(&state.db, &audio).await?;
+    audio::update_status(&state.db, uid, AudioStatus::Pending).await?;
+
+    FILE_LOCKS.write().await.insert(uid, Mutex::new(()));
+
+    Ok((StatusCode::CREATED, Json(serde_json::json!({ "id": uid }))))
+}
+
+async fn upload(
+    _: dependencies::AuthUser,
+    Protobuf(part): Protobuf<UploadChunk>,
+) -> Result<impl IntoResponse, HTTPError> {
+    let id = Uuid::parse_str(&part.id).map_err(|e| {
+        log::error!("Error parsing UUID: {:?}", e);
+        HTTPError::BadRequest
+    })?;
+
+    let file_path = format!("{}/{}.{}", UPLOAD_DIR, id.simple().to_string(), part.ext);
+
+    // First, get the reference to the RwLock, and hold it longer.
+    let locks = FILE_LOCKS.read().await;
+
+    // Now, check for the lock associated with the id.
+    let lock = match locks.get(&id) {
+        Some(lock) => lock,
+        None => return Err(HTTPError::BadRequest),
+    };
+
+    // Lock the mutex for the file.
+    let _guard = lock.lock().await;
+
+    let mut file = File::open(&file_path).await.map_err(|e| {
+        log::error!("Error opening file: {:?}", e);
+        HTTPError::InternalServerError
+    })?;
+
+    file.seek(tokio::io::SeekFrom::Start(
+        (part.chunk_number * 1024 * 1024) as u64,
+    ))
+    .await
+    .map_err(|e| {
+        log::error!("Error seeking file: {:?}", e);
+        HTTPError::InternalServerError
+    })?;
+
+    file.write_all(&part.chunk).await.map_err(|e| {
         log::error!("Error writing to file: {:?}", e);
         HTTPError::InternalServerError
     })?;
-    log::debug!("File saved to disk");
-    // Convert file to AAC LC format
-    let aac_lc_file = spawn_blocking(move || utils::to_aa_lc(&file_name))
+
+    drop(_guard);
+
+    // Get the chunk counter lock for the file
+    let mut counters = CHUNK_COUNTERS.write().await;
+    let counter = counters.entry(id).or_insert_with(|| Mutex::new(0));
+
+    // Increment the chunk counter
+    let mut counter_guard = counter.lock().await;
+    *counter_guard += 1; // Increment the counter for the file
+
+    log::info!("File {} has received chunk {}", id, *counter_guard);
+    drop(counter_guard);
+
+    Ok(StatusCode::CREATED)
+}
+
+async fn end_upload(
+    _: dependencies::AuthUser,
+    State(state): State<Arc<AppState>>,
+    Json(metadata): Json<UploadAudioMetadata>,
+) -> Result<impl IntoResponse, HTTPError> {
+    let id = match metadata.id {
+        Some(id) => id,
+        None => {
+            log::error!("No ID provided");
+            return Err(HTTPError::BadRequest);
+        }
+    };
+
+    let recieved_chunks = {
+        let counters = CHUNK_COUNTERS.read().await;
+        let counter = match counters.get(&id) {
+            Some(counter) => counter,
+            None => {
+                log::error!("No counter found for ID: {:?}", id);
+                return Err(HTTPError::BadRequest);
+            }
+        };
+
+        let counter_guard = counter.lock().await;
+        *counter_guard
+    };
+
+    if recieved_chunks != metadata.total_chunks {
+        log::error!(
+            "Expected {} chunks, but got {}",
+            metadata.total_chunks,
+            recieved_chunks
+        );
+        return Err(HTTPError::BadRequest);
+    } else {
+        CHUNK_COUNTERS.write().await.remove(&id);
+        FILE_LOCKS.write().await.remove(&id);
+        log::debug!("All chunks received");
+    }
+
+    let s3_url = audio::get_audio_url(&state.db, id).await?;
+    let file_path = format!("{}/{}.{}", chrono::Utc::now().year(), id, metadata.ext);
+    let raw_path = format!("{}/{}.m4a", chrono::Utc::now().year(), id);
+    let out_path = PathBuf::new().join(&raw_path);
+    let out_path_clone = raw_path.clone();
+
+    _ = spawn_blocking(move || utils::to_aa_lc(&file_path, &out_path_clone))
         .await
         .map_err(|e| {
             log::error!("Error converting to AAC LC: {:?}", e);
             HTTPError::InternalServerError
-        })??;
+        })?;
 
-    // Save to database
-    let audio_ud: Uuid = Uuid::new_v4();
-    let current_year = chrono::Utc::now().year();
-    let s3_url = format!("{}/{}.m4a", current_year, audio_ud);
-
-    let audio_file = Audio {
-        id: audio_ud.clone(),
-        title: audio.title.unwrap_or("Untitled".to_string()),
-        creator: auth_user.user_id,
-        description: audio.description.unwrap_or("".to_string()),
-        audio_url: s3_url.clone(),
-        private: audio.private.unwrap_or(true),
-        category: audio.category.unwrap_or(Category {
-            id: Uuid::nil(),
-            name: "General".to_string(),
-        }),
-        tags: audio.tags,
-    };
-
-    audio::upload(&state.db, &audio_file).await?;
-
-    // Upload file to B2 Backblaze
-    _ = tokio::task::spawn(async move {
-        to_backblaze(&Path::new(&aac_lc_file), &state, audio_ud, s3_url).await
+    tokio::task::spawn({
+        async move {
+            _ = to_backblaze(out_path, &state, id, s3_url)
+                .await
+                .map_err(|e| {
+                    log::error!("Error uploading to backblaze: {:?}", e);
+                })
+        }
     });
 
-    Ok((StatusCode::CREATED, Json(audio_file)))
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn set_private(

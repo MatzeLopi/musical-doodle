@@ -91,19 +91,9 @@ pub async fn send_mail(to: &str, subject: &str, html: &str, state: &AppState) ->
     Ok(())
 }
 
-pub fn to_aa_lc(input_path: &str) -> Result<String, HTTPError> {
+pub fn to_aa_lc(input_path: &str, output_path: &str) -> Result<(), HTTPError> {
     // Get the file extension and output file path
     let input_path = Path::new(input_path);
-    let output_path = input_path.with_extension("m4a"); // AAC LC is often stored as .m4a
-
-    // FFmpeg command to convert to AAC LC
-    let output_path_str = match output_path.to_str() {
-        Some(path) => path.to_string(),
-        None => {
-            log::error!("Failed to convert path to string");
-            return Err(HTTPError::InternalServerError);
-        }
-    };
 
     let status = Command::new("ffmpeg")
         .arg("-i")
@@ -116,11 +106,11 @@ pub fn to_aa_lc(input_path: &str) -> Result<String, HTTPError> {
         .arg("128k")
         .arg("-f")
         .arg("adts")
-        .arg(output_path_str.clone())
+        .arg(output_path)
         .status();
 
     match status {
-        Ok(status) if status.success() => Ok(output_path_str), // Success, return the output path
+        Ok(status) if status.success() => Ok(()), // Success, return the output path
         Ok(status) => {
             log::error!("Failed to convert to AAC LC: {:?}", status);
             Err(HTTPError::InternalServerError)

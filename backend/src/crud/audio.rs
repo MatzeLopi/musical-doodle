@@ -233,6 +233,20 @@ pub async fn delete(db: &PgPool, audio_id: Uuid, user_id: Uuid) -> Result<(), HT
     }
 }
 
+pub async fn get_audio_url(db: &PgPool, audio_id: Uuid) -> Result<String, HTTPError> {
+    let result = sqlx::query!("SELECT audio_url FROM tracks WHERE track_id = $1", audio_id)
+        .fetch_one(db)
+        .map_err(HTTPError::from)
+        .await;
+    match result {
+        Ok(audio) => Ok(audio.audio_url),
+        Err(e) => {
+            log::error!("Error getting audio url: {:?}", e);
+            Err(HTTPError::from(e))
+        }
+    }
+}
+
 pub async fn get_audios(db: &PgPool, username: String) -> Result<Vec<Audio>, HTTPError> {
     let result = sqlx::query!(
         r#"
