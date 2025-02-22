@@ -17,11 +17,11 @@ use chrono::Datelike;
 use once_cell::sync::Lazy;
 use s3::{bucket::Bucket, creds::Credentials, region::Region};
 use std::{collections::HashMap, fs::create_dir_all, path::PathBuf, sync::Arc};
-use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use tokio::io::AsyncSeekExt;
 use tokio::task::spawn_blocking; // For the lazy initialization of the lock map
 
 use tokio::{
-    fs::{remove_file, File},
+    fs::{remove_file, File, OpenOptions},
     io::AsyncWriteExt,
     sync::{Mutex, RwLock},
 };
@@ -40,7 +40,9 @@ pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/sound/my_audios", get(get_my_audios))
         .route("/sound/{username}", get(get_audio))
-        .route("/sound/upload", post(upload))
+        .route("/sound/upload/start", post(start_upload))
+        .route("/sound/upload/chunk", post(upload))
+        .route("/sound/upload/end", post(end_upload))
         .route("/sound/delete/", delete(delete_audio))
         .route("/sound/update/set_private", post(set_private))
         .route("/sound/update/set_public", post(set_public))
@@ -218,7 +220,7 @@ async fn upload(
     })?;
 
     let file_path = format!("{}/{}.{}", UPLOAD_DIR, id.simple().to_string(), part.ext);
-
+    log::debug!("Raw Protobuf received: {:?}", part);
     // First, get the reference to the RwLock, and hold it longer.
     let locks = FILE_LOCKS.read().await;
 
@@ -231,10 +233,14 @@ async fn upload(
     // Lock the mutex for the file.
     let _guard = lock.lock().await;
 
-    let mut file = File::open(&file_path).await.map_err(|e| {
-        log::error!("Error opening file: {:?}", e);
-        HTTPError::InternalServerError
-    })?;
+    let mut file = OpenOptions::new()
+        .write(true)
+        .open(&file_path)
+        .await
+        .map_err(|e| {
+            log::error!("Error opening file: {:?}", e);
+            HTTPError::InternalServerError
+        })?;
 
     file.seek(tokio::io::SeekFrom::Start(
         (part.chunk_number * 1024 * 1024) as u64,
@@ -260,7 +266,7 @@ async fn upload(
     let mut counter_guard = counter.lock().await;
     *counter_guard += 1; // Increment the counter for the file
 
-    log::info!("File {} has received chunk {}", id, *counter_guard);
+    log::debug!("File {} has received chunk {}", id, *counter_guard);
     drop(counter_guard);
 
     Ok(StatusCode::CREATED)
@@ -307,7 +313,7 @@ async fn end_upload(
     }
 
     let s3_url = audio::get_audio_url(&state.db, id).await?;
-    let file_path = format!("{}/{}.{}", chrono::Utc::now().year(), id, metadata.ext);
+    let file_path = format!("{}/{}.{}", UPLOAD_DIR, id.simple(), metadata.ext);
     let raw_path = format!("{}/{}.m4a", chrono::Utc::now().year(), id);
     let out_path = PathBuf::new().join(&raw_path);
     let out_path_clone = raw_path.clone();

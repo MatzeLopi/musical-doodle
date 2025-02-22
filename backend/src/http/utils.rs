@@ -6,6 +6,7 @@ use crate::http::{error::Error as HTTPError, AppState};
 use anyhow::Error;
 use mail_send::mail_builder::MessageBuilder;
 use rand::{distributions::Alphanumeric, Rng};
+use std::fs::create_dir_all;
 
 const VERIFICATION_TEMPLATE: &str = r#"
 <!DOCTYPE html>
@@ -94,6 +95,22 @@ pub async fn send_mail(to: &str, subject: &str, html: &str, state: &AppState) ->
 pub fn to_aa_lc(input_path: &str, output_path: &str) -> Result<(), HTTPError> {
     // Get the file extension and output file path
     let input_path = Path::new(input_path);
+    let out_path = Path::new(output_path);
+
+    match out_path.parent() {
+        Some(parent) => {
+            if !parent.exists() {
+                create_dir_all(parent).map_err(|e| {
+                    log::error!("Failed to create output directory: {:?}", e);
+                    HTTPError::InternalServerError
+                })?;
+            }
+        }
+        None => {
+            log::error!("Invalid output path");
+            return Err(HTTPError::InternalServerError);
+        }
+    }
 
     let status = Command::new("ffmpeg")
         .arg("-i")

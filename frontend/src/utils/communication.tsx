@@ -23,6 +23,8 @@ export async function fetchFromAPI(
         ...options,
     };
 
+    console.debug(`Sending request to ${BASE_URL}${endpoint}`, defaultOptions);
+
     // Fetch API request
     const response = await fetch(`${BASE_URL}${endpoint}`, defaultOptions);
 

@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { fetchFromAPI } from '../utils/communication';
+import { UploadChunk } from '../proto/upload_pb';
 
-const CHUNK_SIZE = 1.5 * 1024 * 1024; // 2MB
+const CHUNK_SIZE = 1024 * 1024; // 1 MB
 
 export default function UploadPage() {
     const [file, setFile] = useState<File | null>(null);
@@ -12,10 +13,10 @@ export default function UploadPage() {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
-    const [tags, setTags] = useState<{ label: string; value: string }[]>([]);
+    const [tags, setTags] = useState<{ name: string; id: string }[]>([]);
     const [isPrivate, setIsPrivate] = useState(false);
-    const [categories, setCategories] = useState<{ label: string; value: string }[]>([]);
-    const [availableTags, setAvailableTags] = useState<{ label: string; value: string }[]>([]);
+    const [categories, setCategories] = useState<{ name: string; id: string }[]>([]);
+    const [availableTags, setAvailableTags] = useState<{ name: string; id: string }[]>([]);
 
     useEffect(() => {
         const fetchCategoriesAndTags = async () => {
@@ -25,8 +26,12 @@ export default function UploadPage() {
                 const categoriesData = await categoriesResponse.json();
                 const tagsData = await tagsResponse.json();
 
-                setCategories(categoriesData.map((cat: any) => ({ label: cat.name, value: cat.id })));
-                setAvailableTags(tagsData.map((tag: any) => ({ label: tag.name, value: tag.id })));
+                setCategories(categoriesData.map((cat: any) => ({ name: cat.name, id: cat.id })));
+                setAvailableTags(tagsData.map((tag: any) => ({ name: tag.name, id: tag.id })));
+
+                console.log('Categories:', categoriesData);
+                console.log('Tags:', tagsData);
+
             } catch (error) {
                 console.error('Failed to fetch categories or tags:', error);
             }
@@ -42,55 +47,85 @@ export default function UploadPage() {
     };
 
     const uploadFile = async () => {
-        if (!file || !category) return;
+        if (!file || !category) {
+            alert('Please select a file and category');
+            return;
+        };
         setUploading(true);
         setProgress(0);
 
-        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('description', description);
-        const selectedCategory = categories.find(cat => cat.value === category);
-        formData.append('category', JSON.stringify({ id: category, name: selectedCategory ? selectedCategory.label : '' }));
-        formData.append('tags', JSON.stringify(tags.map(tag => ({ id: tag.value, name: tag.label }))));
-        formData.append('private', isPrivate.toString());
-        formData.append('filename', file.name); // Send filename with each chunk
-        formData.append('totalChunks', totalChunks.toString());
-
-        for (let i = 0; i < totalChunks; i++) {
-            const start = i * CHUNK_SIZE;
-            const end = Math.min(file.size, start + CHUNK_SIZE);
-            const chunk = file.slice(start, end);
-
-            formData.append('file', chunk, file.name); // Include filename
-            formData.append('chunkIndex', i.toString());
+        const chunkSize = 1024 * 1024; // 1MB per chunk
+        const totalChunks = Math.ceil(file.size / chunkSize);
 
 
-            try {
-                const response = await fetchFromAPI('/sound/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Upload failed for chunk ${i + 1}: ${response.status} ${response.statusText}`);
-                }
-
-                setProgress(((i + 1) / totalChunks) * 100);
-            } catch (error) {
-                console.error(error);
-                setUploading(false);
-                if (error instanceof Error) {
-                    alert(`Upload failed: ${error.message}`);
-                } else {
-                    alert('Upload failed: An unknown error occurred.');
-                }
-                return; // Stop the upload
-            }
+        const metadata = {
+            id: null,
+            title: title,
+            ext: file.name.split('.').pop() || "bin",
+            description: description,
+            category: categories.find((cat) => cat.id === category),
+            tags: tags,
+            private: isPrivate,
+            total_chunks: totalChunks
         }
 
-        setUploading(false);
-        alert('Upload complete');
+        const response = await fetchFromAPI('/sound/upload/start', {
+            method: 'POST',
+            body: JSON.stringify(metadata)
+        }, "application/json");
+
+        if (!response.ok) {
+            alert('Failed to start upload');
+            setUploading(false);
+            return;
+        }
+
+        const { id } = await response.json();
+        metadata.id = id;
+
+        console.log("Metadata:", metadata);
+
+
+        for (let i = 0; i < totalChunks; i++) {
+            const chunk = file.slice(i * chunkSize, (i + 1) * chunkSize);
+            const arrayBuffer = await chunk.arrayBuffer();
+            const chunkData = new Uint8Array(arrayBuffer); // Convert to bytes
+            // Create a Protobuf message
+            const message = UploadChunk.create({
+                id,
+                chunk_number: i,
+                chunk: chunkData,
+                ext: file.name.split('.').pop() || "bin"
+            });
+            console.log("Chunk:", message);
+
+            // Serialize to Protobuf binary format
+            const buffer = UploadChunk.encode(message).finish();
+
+            await fetchFromAPI("/sound/upload/chunk", {
+                method: "POST",
+                body: buffer
+            }, "application/octet-stream");
+            setProgress(((i + 1) / totalChunks) * 100);
+
+        }
+
+        const finalResponse = await fetchFromAPI('/sound/upload/end', {
+            method: 'POST',
+            body: JSON.stringify(metadata)
+        }, "application/json");
+
+        if (!finalResponse.ok) {
+            alert('Failed to upload file');
+            setUploading(false);
+            return;
+        } else {
+            setUploading(false);
+            setProgress(0);
+            alert('File uploaded successfully');
+        }
+
+        console.log("File upload completed!");
     };
 
     return (
@@ -105,16 +140,21 @@ export default function UploadPage() {
                 <select value={category} onChange={(e) => setCategory(e.target.value)} className="mb-2 p-2 w-full border rounded">
                     <option value="">Select Category</option>
                     {categories.map((cat) => (
-                        <option key={cat.value} value={cat.value}>{cat.label}</option>
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                 </select>
 
                 {/* Tags Multi-Select Dropdown */}
                 <Select
                     isMulti
-                    options={availableTags}
-                    value={tags}
-                    onChange={(selected: any) => setTags(selected as { label: string; value: string }[])}
+                    options={availableTags.map((tag) => ({ value: tag.id, label: tag.name }))}
+                    value={tags.map((tag) => ({ value: tag.id, label: tag.name }))}
+                    onChange={(selected: any) =>
+                        setTags(selected.map((tag: { value: string; label: string }) => ({
+                            id: tag.value,
+                            name: tag.label
+                        })))
+                    }
                     className="mb-2"
                 />
 
