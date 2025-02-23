@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { fetchFromAPI } from '../utils/communication';
 import { UploadChunk } from '../proto/upload_pb';
+import Navbar from '../components/Navbar';
 
 const CHUNK_SIZE = 1024 * 1024; // 1 MB
 
@@ -129,60 +130,65 @@ export default function UploadPage() {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-            <div className="bg-white shadow-lg p-6 rounded-lg max-w-md w-full">
-                <h2 className="text-xl font-bold mb-4">Upload File in Chunks</h2>
-                <input type="file" onChange={handleFileChange} className="mb-4" />
-                <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="mb-2 p-2 w-full border rounded" />
-                <input type="text" placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} className="mb-2 p-2 w-full border rounded" />
+        <>
+            <div className="flex flex-col min-h-screen bg-gray-100">
+                <Navbar />
+                <div className="flex items-center justify-center m-auto">
+                    <div className="bg-white shadow-lg p-6 rounded-lg max-w-md w-full">
+                        <h2 className="text-xl font-bold mb-4">Upload File in Chunks</h2>
+                        <input type="file" onChange={handleFileChange} className="mb-4" />
+                        <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="mb-2 p-2 w-full border rounded" />
+                        <input type="text" placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} className="mb-2 p-2 w-full border rounded" />
 
-                {/* Category Select Dropdown */}
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="mb-2 p-2 w-full border rounded">
-                    <option value="">Select Category</option>
-                    {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                </select>
+                        {/* Category Select Dropdown */}
+                        <select value={category} onChange={(e) => setCategory(e.target.value)} className="mb-2 p-2 w-full border rounded">
+                            <option value="">Select Category</option>
+                            {categories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                        </select>
 
-                {/* Tags Multi-Select Dropdown */}
-                <Select
-                    isMulti
-                    options={availableTags.map((tag) => ({ value: tag.id, label: tag.name }))}
-                    value={tags.map((tag) => ({ value: tag.id, label: tag.name }))}
-                    onChange={(selected: any) =>
-                        setTags(selected.map((tag: { value: string; label: string }) => ({
-                            id: tag.value,
-                            name: tag.label
-                        })))
-                    }
-                    className="mb-2"
-                />
+                        {/* Tags Multi-Select Dropdown */}
+                        <Select
+                            isMulti
+                            options={availableTags.map((tag) => ({ value: tag.id, label: tag.name }))}
+                            value={tags.map((tag) => ({ value: tag.id, label: tag.name }))}
+                            onChange={(selected: any) =>
+                                setTags(selected.map((tag: { value: string; label: string }) => ({
+                                    id: tag.value,
+                                    name: tag.label
+                                })))
+                            }
+                            className="mb-2"
+                        />
 
-                <label className="flex items-center mb-4">
-                    <input type="checkbox" checked={isPrivate} onChange={() => setIsPrivate(!isPrivate)} className="mr-2" /> Private
-                </label>
+                        <label className="flex items-center mb-4">
+                            <input type="checkbox" checked={isPrivate} onChange={() => setIsPrivate(!isPrivate)} className="mr-2" /> Private
+                        </label>
 
-                {file && (
-                    <p className="text-sm text-gray-600">Selected file: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</p>
-                )}
+                        {file && (
+                            <p className="text-sm text-gray-600">Selected file: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                        )}
 
-                <button
-                    onClick={uploadFile}
-                    disabled={!file || uploading}
-                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg disabled:bg-gray-300"
-                >
-                    {uploading ? 'Uploading...' : 'Upload'}
-                </button>
+                        <button
+                            onClick={uploadFile}
+                            disabled={!file || uploading}
+                            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg disabled:bg-gray-300"
+                        >
+                            {uploading ? 'Uploading...' : 'Upload'}
+                        </button>
 
-                {uploading && (
-                    <div className="w-full bg-gray-200 rounded-lg h-4 mt-4">
-                        <div
-                            className="bg-blue-500 h-4 rounded-lg"
-                            style={{ width: `${progress}%` }}
-                        ></div>
+                        {uploading && (
+                            <div className="w-full bg-gray-200 rounded-lg h-4 mt-4">
+                                <div
+                                    className="bg-blue-500 h-4 rounded-lg"
+                                    style={{ width: `${progress}%` }}
+                                ></div>
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
             </div>
-        </div>
+        </>
     );
 }

@@ -1,5 +1,6 @@
 import type { NextPage } from "next";
 import Head from "next/head";
+import Navbar from "../components/Navbar";
 
 const About: NextPage = () => {
     return (
@@ -7,11 +8,14 @@ const About: NextPage = () => {
             <Head>
                 <title>About</title>
             </Head>
-            <div className="flex flex-col items-center justify-center min-h-screen p-4">
-                <h1 className="text-4xl font-bold mb-4">About</h1>
-                <p className="text-center">
-                    Creator centered audio streaming platform
-                </p>
+            <div className="flex flex-col min-h-screen bg-gray-100">
+                <Navbar />
+                <div className="flex items-center justify-center m-auto">
+                    <h1 className="text-4xl font-bold mb-4">About</h1>
+                    <p className="text-center">
+                        Creator centered audio streaming platform
+                    </p>
+                </div>
             </div>
         </>
     );

@@ -28,9 +28,9 @@ const ServerStatus = () => {
         <>
             {/* Conditionally render the popup when the server is down */}
             {!isAvailable && (
-                <div className="fixed bottom-5 right-5 bg-gray-700 text-white text-sm px-4 py-2 rounded-lg shadow-md opacity-60 max-w-xs md:max-w-sm">
+                <div className="fixed bottom-5 right-5 bg-red-600 text-white text-sm px-4 py-2 rounded-lg shadow-md opacity-60 max-w-xs md:max-w-sm">
                     <p className="font-medium">
-                        Can not reach the backend. <br />
+                        Cannot reach the server. <br />
                         Please try again later.
                     </p>
                 </div>
