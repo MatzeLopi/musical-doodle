@@ -9,11 +9,11 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "audio_status", rename_all = "lowercase")]
+#[sqlx(type_name = "track_status", rename_all = "lowercase")]
 pub enum AudioStatus {
     Pending,
     Uploading,
-    Completed,
+    Complete,
     Failed,
 }
 
@@ -29,7 +29,10 @@ pub async fn update_status(
         audio_id
     )
     .execute(db)
-    .map_err(HTTPError::from)
+    .map_err(|e| {
+        log::error!("Error updating status: {:?}", e);
+        HTTPError::InternalServerError
+    })
     .await?;
 
     // Check the result and return appropriate response
@@ -109,16 +112,37 @@ pub async fn create_category(db: &PgPool, category: String) -> Result<(), HTTPEr
 
 pub async fn upload(db: &PgPool, audio: &Audio) -> Result<(), HTTPError> {
     let result = sqlx::query!(
-        "INSERT INTO tracks (title, creator_id, description, audio_url, category_id) VALUES ($1, $2, $3, $4, $5)",
-        audio.title,
+        "INSERT INTO tracks (track_id,  creator_id, title, description, audio_url, category_id) VALUES ($1, $2, $3, $4, $5, $6)",
+        audio.id,
         audio.creator,
+        audio.title,
         audio.description,
         audio.audio_url,
         audio.category.id
-    ).execute(db).map_err(HTTPError::from).await?;
+    ).execute(db).map_err(|e|{
+        log::error!("Error uploading audio: {:?}", e);
+        HTTPError::InternalServerError}).await?;
+
+    for tag in &audio.tags {
+        _ = sqlx::query!(
+            "INSERT INTO track_tags (track_id, tag_id) VALUES ($1, $2)",
+            audio.id,
+            tag.id
+        )
+        .execute(db)
+        .map_err(|e| {
+            log::error!("Error uploading audio: {:?}", e);
+            HTTPError::InternalServerError
+        })
+        .await?;
+    }
+
     match result.rows_affected() {
         1 => Ok(()),
-        _ => Err(HTTPError::InternalServerError),
+        count => {
+            log::debug!("Expected 1 row affected, got {}", count);
+            Err(HTTPError::InternalServerError)
+        }
     }
 }
 
@@ -206,6 +230,20 @@ pub async fn delete(db: &PgPool, audio_id: Uuid, user_id: Uuid) -> Result<(), HT
     match result.rows_affected() {
         1 => Ok(()),
         _ => Err(HTTPError::Forbidden),
+    }
+}
+
+pub async fn get_audio_url(db: &PgPool, audio_id: Uuid) -> Result<String, HTTPError> {
+    let result = sqlx::query!("SELECT audio_url FROM tracks WHERE track_id = $1", audio_id)
+        .fetch_one(db)
+        .map_err(HTTPError::from)
+        .await;
+    match result {
+        Ok(audio) => Ok(audio.audio_url),
+        Err(e) => {
+            log::error!("Error getting audio url: {:?}", e);
+            Err(HTTPError::from(e))
+        }
     }
 }
 

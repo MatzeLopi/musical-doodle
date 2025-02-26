@@ -4,7 +4,7 @@ export default function Header() {
     const [isNavOpen, setIsNavOpen] = useState(false); // initiate isNavOpen state with false
 
     return (
-        <div className="flex items-center justify-between border-b border-gray-400 py-8">
+        <div className="flex items-center justify-between bg-gray-600 py-8">
             <a href="/">
                 <img alt="logo" />
             </a>
@@ -38,11 +38,18 @@ export default function Header() {
                             </svg>
                         </div>
                         <ul className="MENU-LINK-MOBILE-OPEN flex flex-col items-center justify-between min-h-[250px]">
+                            between
+                            <li className="border-b border-gray-400 my-8 uppercase">
+                                <a href="/">Feed</a>
+                            </li>
+                            <li className="border-b border-gray-400 my-8 uppercase">
+                                <a href="/search">Search</a>
+                            </li>
                             <li className="border-b border-gray-400 my-8 uppercase">
                                 <a href="/login">Login</a>
                             </li>
                             <li className="border-b border-gray-400 my-8 uppercase">
-                                <a href="/register">Register</a>
+                                <a href="/file">Upload</a>
                             </li>
                             <li className="border-b border-gray-400 my-8 uppercase">
                                 <a href="/me">Me</a>
@@ -51,15 +58,21 @@ export default function Header() {
                     </div>
                 </section>
 
-                <ul className="DESKTOP-MENU hidden space-x-8 lg:flex">
+                <ul className="DESKTOP-MENU hidden space-x-8 lg:flex uppercase">
                     <li>
-                        <a href="/about">About</a>
+                        <a href="/">Feed</a>
                     </li>
                     <li>
-                        <a href="/portfolio">Portfolio</a>
+                        <a href="/search">Search</a>
                     </li>
                     <li>
-                        <a href="/contact">Contact</a>
+                        <a href="/login">Login</a>
+                    </li>
+                    <li>
+                        <a href="/file">Upload</a>
+                    </li>
+                    <li>
+                        <a href="/me">Me </a>
                     </li>
                 </ul>
             </nav>

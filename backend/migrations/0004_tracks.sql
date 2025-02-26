@@ -2,7 +2,7 @@ create table
     tracks (
         track_id uuid primary key,
         creator_id uuid not null references users (user_id) on delete cascade,
-        title text collate "case_insensitive" unique not null,
+        title text collate "case_insensitive" not null,
         private boolean not null default false,
         description text,
         category_id uuid not null references categories (category_id) on delete restrict,

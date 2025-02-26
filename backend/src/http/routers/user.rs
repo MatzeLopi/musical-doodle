@@ -1,7 +1,7 @@
 use crate::{
     crud,
     http::{dependencies, error::Error as HTTPError, AppState},
-    schemas::users::NewUser,
+    schemas::users::{NewUser, User},
 };
 use axum::{
     extract::{Json, Path, State},
@@ -10,6 +10,7 @@ use axum::{
     routing::{delete, get, post, Router},
 };
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -25,10 +26,21 @@ pub fn router(state: Arc<AppState>) -> Router {
 
 async fn me(
     State(state): State<Arc<AppState>>,
-    _: dependencies::CsrfValidator,
-    auth_user: dependencies::AuthUser,
+    auth_user: dependencies::OptionalAuthUser,
 ) -> Result<impl IntoResponse, HTTPError> {
-    let user_id = auth_user.user_id;
+    let user_id = match auth_user.0 {
+        Some(user) => user.user_id,
+        _ => {
+            let user = User {
+                id: Uuid::nil(),
+                username: String::from(""),
+                email: String::from(""),
+                verified: true,
+            };
+            return Ok((StatusCode::NO_CONTENT, Json(user)));
+        }
+    };
+
     let user = crud::user::get_user_by_id(&user_id, &state.db).await?;
     Ok((StatusCode::OK, Json(user)))
 }
@@ -53,7 +65,6 @@ async fn create_user(
 
 async fn update_password(
     State(state): State<Arc<AppState>>,
-    _: dependencies::CsrfValidator,
     user: dependencies::AuthUser,
     password: String,
 ) -> Result<impl IntoResponse, HTTPError> {

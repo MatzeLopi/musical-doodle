@@ -25,7 +25,10 @@ pub struct Config {
     pub mail_password: String,
 
     #[clap(long, env)]
-    pub s3_secret: String,
+    pub s3_access_key: String,
+
+    #[clap(long, env)]
+    pub s3_secret_key: String,
 
     #[clap(long, env)]
     pub s3_bucket: String,

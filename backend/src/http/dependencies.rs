@@ -91,7 +91,10 @@ impl AuthUser {
         );
 
         match token {
-            Ok(token) => Ok(token),
+            Ok(token) => {
+                log::debug!("Token generated successfully");
+                Ok(token)
+            }
             Err(e) => {
                 log::debug!("Failed to encode token: {:?}", e);
                 Err(HTTPError::InternalServerError)
@@ -120,6 +123,7 @@ impl AuthUser {
     }
 }
 
+#[allow(dead_code)]
 impl OptionalAuthUser {
     pub fn user_id(&self) -> Option<Uuid> {
         self.0.as_ref().map(|auth_user| auth_user.user_id)

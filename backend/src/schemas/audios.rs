@@ -1,6 +1,30 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+#[derive(prost::Message)]
+pub struct UploadChunk {
+    #[prost(string, tag = "1")]
+    pub id: String,
+    #[prost(int32, tag = "2")]
+    pub chunk_number: i32,
+    #[prost(bytes, tag = "3")]
+    pub chunk: Vec<u8>,
+    #[prost(string, tag = "4")]
+    pub ext: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UploadAudioMetadata {
+    pub id: Option<Uuid>,
+    pub title: String,
+    pub ext: String,
+    pub description: String,
+    pub category: Category,
+    pub tags: Vec<Tag>,
+    pub private: bool,
+    pub total_chunks: u64,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Category {
     pub id: Uuid,
@@ -23,30 +47,6 @@ pub struct Audio {
     pub private: bool,
     pub category: Category,
     pub tags: Vec<Tag>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UploadAudio {
-    pub title: String,
-    pub description: String,
-    pub category: Category,
-    pub tags: Vec<Tag>,
-    pub private: bool,
-}
-
-impl UploadAudio {
-    pub fn default() -> Self {
-        Self {
-            title: "".to_string(),
-            description: "".to_string(),
-            category: Category {
-                id: Uuid::new_v4(),
-                name: "".to_string(),
-            },
-            tags: vec![],
-            private: false,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

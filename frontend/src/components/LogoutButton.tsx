@@ -29,6 +29,7 @@ const LogoutButton = () => {
 
     const handleOnClick = () => {
         handleLogout();
+        window.location.reload();
     };
 
     // Function to hide the alert after a delay
