@@ -1,5 +1,3 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
-
 export async function fetchFromAPI(endpoint: string, options: RequestInit = {}) {
     const csrfToken = getCookie('x_csft') || ''; // Default to an empty string if undefined
 
@@ -14,7 +12,7 @@ export async function fetchFromAPI(endpoint: string, options: RequestInit = {}) 
         ...options,
     };
 
-    const response = await fetch(`${BASE_URL}${endpoint}`, defaultOptions);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, defaultOptions);
 
     return response;
 }

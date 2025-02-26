@@ -31,7 +31,7 @@ const Login: React.FC = () => {
         try {
 
 
-            const response = await fetch('http://localhost:8080/token/get', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/token/get`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
