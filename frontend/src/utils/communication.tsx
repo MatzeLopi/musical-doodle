@@ -1,4 +1,4 @@
-export async function fetchFromAPI(endpoint: string, options: RequestInit = {},contentType: null | string = null) {
+export async function fetchFromAPI(endpoint: string, options: RequestInit = {}, contentType: null | string = null) {
     const csrfToken = getCookie("x_csft") || ""; // Get CSRF token
 
     // Ensure headers object exists
@@ -16,9 +16,9 @@ export async function fetchFromAPI(endpoint: string, options: RequestInit = {},c
         headers,
         ...options,
     };
-
-
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, defaultOptions);
+    let url = `${process.env.NEXT_PUBLIC_API_URL}${endpoint}`;
+    console.log(url);
+    const response = await fetch(url, defaultOptions);
 
     return response;
 }
