@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { fetchFromAPI } from '../utils/communication';
 import Navbar from '../components/Navbar';
 import LogoutButton from '../components/LogoutButton';
+import Info from '../components/Info';
+import Alert from '../components/Alert';
+import BackendState from '../components/BackendState';
 
 interface User {
     username: string;
@@ -12,6 +15,7 @@ interface User {
 const UserProfile = () => {
     const [user, setUser] = useState<User | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
     // Fetch user data when the component mounts
     useEffect(() => {
@@ -20,9 +24,11 @@ const UserProfile = () => {
                 const data = await fetchFromAPI('/users/me');
 
                 if (data.status == 204) {
-                    alert("You are not logged in")
-                    window.location.href = "/login"
-                    throw new Error('Not logged in');
+                    setAlertMessage('Not logged in. Redirecting to login...');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                      }, 3000);
+                      return;
                 }
 
                 let json = await data.json();
@@ -45,8 +51,15 @@ const UserProfile = () => {
             </>
         );
     }
-
-    if (!user) {
+    if (alertMessage) {
+        return (
+            <>
+                <div className="flex justify-center items-center min-h-screen">
+                    <Alert message={alertMessage} onClose={() => { }} />
+                </div>
+            </>
+        );
+    } else if (!user) {
         return (
             <>
                 <div className="flex justify-center items-center min-h-screen">
@@ -89,6 +102,7 @@ const UserProfile = () => {
                 <div className="flex flex-grow justify-center items-center ">
                     <LogoutButton />
                 </div>
+                <BackendState />
 
             </div>
         </>

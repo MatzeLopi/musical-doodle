@@ -1,12 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '../components/Navbar';
+import Alert from '../components/Alert';
+import Info from '../components/Info';
+import BackendState from '../components/BackendState';
+import { fetchFromAPI } from '../utils/communication';
 
 const Login: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const router = useRouter();
+    const [showAlert, setShowAlert] = useState(false);
+    const [loggedIn, setLoggedIn] = useState(false);
+
+    useEffect(() => {
+        const checkIfLoggedIn = async () => {
+            try {
+                const response = await fetchFromAPI('/users/me');
+                if (response.status == 200) {
+                    setLoggedIn(true);
+                    setTimeout(() => {
+                        window.location.href = '/';
+                      }, 3000);
+                    return;
+                }
+
+            } catch (error) {
+                setError((error as Error).message);
+            }
+        };
+
+        checkIfLoggedIn();
+    }, [router]);
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -24,23 +50,28 @@ const Login: React.FC = () => {
                     password: password,
                 }),
             });
-            if (response.status == 302) {
-                console.log("Already logged in")
 
-            }
-
-            else if (!response.ok) {
-                throw new Error('Login failed');
+            if (!response.ok) {
+                throw new Error(response.statusText);
             }
 
             // Handle successful login
             const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || '/';
             router.push(redirectUrl); // Redirect to the saved URL or homepage
         } catch (err) {
-            console.log(err)
-            setError('Login failed. Please check your credentials and try again.');
+            setError('Login failed: ' + (err as Error).message);
         }
     };
+
+    if (loggedIn) {
+        return (
+            <>
+                <div className="flex justify-center items-center min-h-screen">
+                    <Info message="Already logged in. Redirecting to Home" onClose={() => { }} />
+                </div>
+            </>
+        );
+    }
 
     return (
         <>
@@ -88,6 +119,13 @@ const Login: React.FC = () => {
                         </form>
                     </div>
                 </div>
+                {showAlert && (
+                    <Alert
+                        message={error}
+                        onClose={() => setShowAlert(false)}
+                    />
+                )}
+            <BackendState />
             </div>
         </>
     );

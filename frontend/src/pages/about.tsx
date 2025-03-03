@@ -1,6 +1,7 @@
 import type { NextPage } from "next";
 import Head from "next/head";
 import Navbar from "../components/Navbar";
+import BackendState from "../components/BackendState";
 
 const About: NextPage = () => {
     return (
@@ -16,6 +17,7 @@ const About: NextPage = () => {
                         Creator centered audio streaming platform
                     </p>
                 </div>
+                <BackendState />
             </div>
         </>
     );

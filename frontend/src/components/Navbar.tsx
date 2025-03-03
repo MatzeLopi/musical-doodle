@@ -4,7 +4,7 @@ export default function Header() {
     const [isNavOpen, setIsNavOpen] = useState(false); // initiate isNavOpen state with false
 
     return (
-        <div className="flex items-center justify-between bg-gray-600 py-8">
+        <div className="flex items-center justify-between bg-gray-600 py-8 px-4">
             <a href="/">
                 <img alt="logo" />
             </a>
@@ -14,12 +14,12 @@ export default function Header() {
                         className="HAMBURGER-ICON space-y-2"
                         onClick={() => setIsNavOpen((prev) => !prev)} // toggle isNavOpen state on click
                     >
-                        <span className="block h-0.5 w-8 animate-pulse bg-gray-600"></span>
-                        <span className="block h-0.5 w-8 animate-pulse bg-gray-600"></span>
-                        <span className="block h-0.5 w-8 animate-pulse bg-gray-600"></span>
+                        <span className="block h-0.5 w-8 animate-pulse bg-white"></span>
+                        <span className="block h-0.5 w-8 animate-pulse bg-white"></span>
+                        <span className="block h-0.5 w-8 animate-pulse bg-white"></span>
                     </div>
 
-                    <div className={isNavOpen ? "showMenuNav" : "hideMenuNav"}> Heading
+                    <div className={isNavOpen ? "showMenuNav" : "hideMenuNav"}> 
                         <div
                             className="CROSS-ICON absolute top-0 right-0 px-8 py-8"
                             onClick={() => setIsNavOpen(false)} // change isNavOpen state to false to close the menu
@@ -38,7 +38,6 @@ export default function Header() {
                             </svg>
                         </div>
                         <ul className="MENU-LINK-MOBILE-OPEN flex flex-col items-center justify-between min-h-[250px]">
-                            between
                             <li className="border-b border-gray-400 my-8 uppercase">
                                 <a href="/">Feed</a>
                             </li>

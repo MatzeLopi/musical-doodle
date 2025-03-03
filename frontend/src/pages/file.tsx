@@ -4,8 +4,12 @@ import Select from 'react-select';
 import { fetchFromAPI } from '../utils/communication';
 import { UploadChunk } from '../proto/upload_pb';
 import Navbar from '../components/Navbar';
+import CategorySelector, {Category} from '../components/CategoriesSelector';
+import TagSelector, {Tag} from '../components/TagSelector';
+import BackendState from '../components/BackendState';
 
 const CHUNK_SIZE = 1024 * 1024; // 1 MB
+
 
 export default function UploadPage() {
     const [file, setFile] = useState<File | null>(null);
@@ -13,33 +17,10 @@ export default function UploadPage() {
     const [progress, setProgress] = useState(0);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [category, setCategory] = useState('');
-    const [tags, setTags] = useState<{ name: string; id: string }[]>([]);
+    const [tags, setTags] = useState<Tag[]>([]);
+    const [category, setCategories] = useState<Category | null>(null);
     const [isPrivate, setIsPrivate] = useState(false);
-    const [categories, setCategories] = useState<{ name: string; id: string }[]>([]);
-    const [availableTags, setAvailableTags] = useState<{ name: string; id: string }[]>([]);
 
-    useEffect(() => {
-        const fetchCategoriesAndTags = async () => {
-            try {
-                const categoriesResponse = await fetchFromAPI('/sound/categories');
-                const tagsResponse = await fetchFromAPI('/sound/tags');
-                const categoriesData = await categoriesResponse.json();
-                const tagsData = await tagsResponse.json();
-
-                setCategories(categoriesData.map((cat: any) => ({ name: cat.name, id: cat.id })));
-                setAvailableTags(tagsData.map((tag: any) => ({ name: tag.name, id: tag.id })));
-
-                console.log('Categories:', categoriesData);
-                console.log('Tags:', tagsData);
-
-            } catch (error) {
-                console.error('Failed to fetch categories or tags:', error);
-            }
-        };
-
-        fetchCategoriesAndTags();
-    }, []);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files.length > 0) {
@@ -48,10 +29,14 @@ export default function UploadPage() {
     };
 
     const uploadFile = async () => {
-        if (!file || !category) {
+        if (!file) {
             alert('Please select a file and category');
             return;
         };
+        if (!category) {
+            alert('Please select a category for the file');
+            return;
+        }
         setUploading(true);
         setProgress(0);
 
@@ -64,7 +49,7 @@ export default function UploadPage() {
             title: title,
             ext: file.name.split('.').pop() || "bin",
             description: description,
-            category: categories.find((cat) => cat.id === category),
+            category: category,
             tags: tags,
             private: isPrivate,
             total_chunks: totalChunks
@@ -89,7 +74,7 @@ export default function UploadPage() {
 
         for (let i = 0; i < totalChunks; i++) {
             const chunk = file.slice(i * chunkSize, (i + 1) * chunkSize);
-            const arrayBuffer = await chunk.arrayBuffer();
+           const arrayBuffer = await chunk.arrayBuffer();
             const chunkData = new Uint8Array(arrayBuffer); // Convert to bytes
             // Create a Protobuf message
             const message = UploadChunk.create({
@@ -129,6 +114,14 @@ export default function UploadPage() {
         console.log("File upload completed!");
     };
 
+    const handleTagChange = (tags: Tag[]) => {
+        setTags(tags);
+    };
+
+    const handleCategoryChange = (category: Category | null) => {
+        setCategories(category);
+    };
+
     return (
         <>
             <div className="flex flex-col min-h-screen bg-gray-100">
@@ -140,27 +133,11 @@ export default function UploadPage() {
                         <input type="text" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="mb-2 p-2 w-full border rounded" />
                         <input type="text" placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} className="mb-2 p-2 w-full border rounded" />
 
-                        {/* Category Select Dropdown */}
-                        <select value={category} onChange={(e) => setCategory(e.target.value)} className="mb-2 p-2 w-full border rounded">
-                            <option value="">Select Category</option>
-                            {categories.map((cat) => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                        </select>
+                        {/* Category Dropdown */}
+                        <CategorySelector onCategoryChange={handleCategoryChange} />
 
                         {/* Tags Multi-Select Dropdown */}
-                        <Select
-                            isMulti
-                            options={availableTags.map((tag) => ({ value: tag.id, label: tag.name }))}
-                            value={tags.map((tag) => ({ value: tag.id, label: tag.name }))}
-                            onChange={(selected: any) =>
-                                setTags(selected.map((tag: { value: string; label: string }) => ({
-                                    id: tag.value,
-                                    name: tag.label
-                                })))
-                            }
-                            className="mb-2"
-                        />
+                        <TagSelector onTagChange={handleTagChange} />
 
                         <label className="flex items-center mb-4">
                             <input type="checkbox" checked={isPrivate} onChange={() => setIsPrivate(!isPrivate)} className="mr-2" /> Private
@@ -188,6 +165,7 @@ export default function UploadPage() {
                         )}
                     </div>
                 </div>
+                <BackendState />
             </div>
         </>
     );

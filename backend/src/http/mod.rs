@@ -46,7 +46,7 @@ pub async fn serve(config: Config, db: PgPool, smtp_pool: Pool<SmtpManager>) -> 
         smtp_pool: Arc::new(smtp_pool),
     });
 
-    let origin = "http://192.168.2.158:3000".parse::<HeaderValue>().unwrap();
+    let origin = "http://192.168.2.135:3000".parse::<HeaderValue>().unwrap();
 
     let cors = CorsLayer::new()
         .allow_methods([

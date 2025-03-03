@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { fetchFromAPI } from '../utils/communication';
 import Navbar from '../components/Navbar';
 import BackendState from '../components/BackendState';
+import Alert from '../components/Alert';
 
 const Login: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -11,6 +12,7 @@ const Login: React.FC = () => {
     const [error, setError] = useState('');
     const router = useRouter();
     const csrfFetched = useRef(false); // Prevent duplicate requests
+    const [showAlert, setShowAlert] = useState(false);
 
 
     const handleSubmit = async (event: React.FormEvent) => {
@@ -44,8 +46,9 @@ const Login: React.FC = () => {
                 }),
             });
 
-            if (!(response.status != 201)) {
-                throw new Error('Registration failed');
+            if (response.status != 201) {
+                console.log(response.status);
+                throw new Error(response.statusText);
             }
 
             console.log('Registration successful:');
@@ -54,6 +57,7 @@ const Login: React.FC = () => {
         } catch (err) {
 
             setError('Registration failed: ' + (err as Error).message);
+            setShowAlert(true);
         }
     };
 
@@ -115,6 +119,15 @@ const Login: React.FC = () => {
                         </form>
                     </div>
                 </div>
+                {showAlert && (
+                <Alert
+                    message={error}
+                    onClose={() => {
+                    console.log("closed");
+                    setShowAlert(false);
+                    }}
+                />
+                )}
                 <BackendState />
 
             </div>

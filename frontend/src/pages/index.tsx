@@ -5,7 +5,10 @@ import { AudioType } from "../components/Audio";
 import { fetchFromAPI } from "../utils/communication";
 import BackendState from "../components/BackendState";
 import Navbar from "../components/Navbar";
-
+import TagSelector from "../components/TagSelector";
+import { Tag } from "../components/TagSelector";
+import CategorySelector, { Category } from "../components/CategoriesSelector";
+import Info from "../components/Info";
 
 const Home: NextPage = () => {
   const [data, setData] = useState<AudioType[]>([]);
@@ -13,6 +16,7 @@ const Home: NextPage = () => {
     src: undefined,
     title: undefined,
   });
+  const [showInfo, setShowInfo] = useState(true);
 
   // Fetching data when the button is clicked
   const HandleClick = async (endpoint: string) => {
@@ -30,6 +34,14 @@ const Home: NextPage = () => {
     setCurrentAudio({ src: audio.source, title: audio.title });
   };
 
+  const handleTagChange = (tags: Tag[]) => {
+    console.log("Selected tags:", tags);
+  };
+
+  const handleCategoryChange = (category: Category | null) => {
+    console.log("Selected category:", category);
+  };
+
   return (
     <>
       <Head>
@@ -39,6 +51,15 @@ const Home: NextPage = () => {
       <div className="flex flex-col min-h-screen bg-gray-100">
         <Navbar />
         <BackendState />
+        {showInfo && (
+          <Info
+            message="Test"
+            onClose={() => {
+              console.log("closed");
+              setShowInfo(false);
+            }}
+          />
+        )}
 
       </div>
     </>
