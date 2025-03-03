@@ -4,12 +4,17 @@ use deadpool::managed::Pool;
 use rust_backend::http;
 use rust_backend::{config::Config, SmtpManager};
 use sqlx::postgres::PgPoolOptions;
+use tokio_rustls::rustls::crypto;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Check if .env file exists, init logger, loda config
     dotenv::dotenv().ok();
     env_logger::init();
+
+    crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("Failed to install default provider");
 
     // Load config
     let config = Config::parse();
