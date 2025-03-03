@@ -40,14 +40,14 @@ async fn get_csfr(mut jar: CookieJar) -> CookieJar {
         .path("/")
         .secure(false) // Change to true in Prod
         .http_only(true)
-        .same_site(SameSite::None)
+        .same_site(SameSite::Lax)
         .expires(expiration)
         .build();
     let client_cookie = Cookie::build(("x_csft", csft))
         .path("/")
         .secure(false) // Change to true in Prod
         .http_only(false)
-        .same_site(SameSite::None)
+        .same_site(SameSite::Lax)
         .expires(expiration)
         .build();
     jar = jar
@@ -79,7 +79,7 @@ async fn token(
             let token_cookie = Cookie::build((dependencies::DEFAULT_AUTH, token.clone()))
                 .secure(false) // Change to true in production
                 .http_only(true)
-                .same_site(SameSite::None)
+                .same_site(SameSite::Lax)
                 .expires(Expiration::from(
                     time::OffsetDateTime::now_utc() + time::Duration::hours(24),
                 ))
