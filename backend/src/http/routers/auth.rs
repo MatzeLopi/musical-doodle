@@ -8,7 +8,7 @@ use crate::{
     schemas::users::UserLogin,
 };
 
-use axum_extra::extract::cookie::{Cookie, CookieJar, Expiration};
+use axum_extra::extract::cookie::{Cookie, CookieJar, Expiration, SameSite};
 
 use axum::{
     extract::{Json, State},
@@ -38,14 +38,16 @@ async fn get_csfr(mut jar: CookieJar) -> CookieJar {
     let expiration = Expiration::from(time::OffsetDateTime::now_utc() + time::Duration::hours(24));
     let server_cookie = Cookie::build(("s_csft", csft.clone()))
         .path("/")
-        .secure(true)
+        .secure(false) // Change to true in Prod
         .http_only(true)
+        .same_site(SameSite::None)
         .expires(expiration)
         .build();
     let client_cookie = Cookie::build(("x_csft", csft))
         .path("/")
-        .secure(true)
+        .secure(false) // Change to true in Prod
         .http_only(false)
+        .same_site(SameSite::None)
         .expires(expiration)
         .build();
     jar = jar
@@ -75,8 +77,9 @@ async fn token(
             let token = auth_user.to_jwt(&state)?;
             jar = get_csfr(jar).await;
             let token_cookie = Cookie::build((dependencies::DEFAULT_AUTH, token.clone()))
-                .secure(true)
+                .secure(false) // Change to true in production
                 .http_only(true)
+                .same_site(SameSite::None)
                 .expires(Expiration::from(
                     time::OffsetDateTime::now_utc() + time::Duration::hours(24),
                 ))
@@ -99,7 +102,7 @@ async fn update_token(
 ) -> Result<impl IntoResponse, HTTPError> {
     let token = user.to_jwt(&state)?;
     let token_cookie = Cookie::build((dependencies::DEFAULT_AUTH, token.clone()))
-        .secure(true)
+        .secure(false) // Change to true in production
         .http_only(true)
         .expires(Expiration::from(
             time::OffsetDateTime::now_utc() + time::Duration::hours(24),
