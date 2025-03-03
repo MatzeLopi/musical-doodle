@@ -50,7 +50,7 @@ digest = "0.10.7"
 jsonwebtoken = "9.3.0"
 mail-send = "0.5.0"
 deadpool = { version = "0.12.1", features = ["rt_tokio_1"] }
-tokio-rustls = "0.26.1"
+tokio-rustls = { version = "0.26.1", features = ["full"] }
 http = "1.2.0"
 tempfile = "3.16.0"
 reqwest = "0.12.12"

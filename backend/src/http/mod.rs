@@ -46,10 +46,16 @@ pub async fn serve(config: Config, db: PgPool, smtp_pool: Pool<SmtpManager>) -> 
         smtp_pool: Arc::new(smtp_pool),
     });
 
-    let origin = "*".parse::<HeaderValue>().unwrap();
+    let origin = "http://192.168.2.158:3000".parse::<HeaderValue>().unwrap();
 
     let cors = CorsLayer::new()
-        .allow_methods([Method::GET, Method::POST, Method::DELETE, Method::PUT])
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::DELETE,
+            Method::PUT,
+            Method::OPTIONS,
+        ])
         .allow_origin(origin)
         .allow_credentials(true)
         .allow_headers([
