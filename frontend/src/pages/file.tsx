@@ -7,6 +7,8 @@ import Navbar from '../components/Navbar';
 import CategorySelector, {Category} from '../components/CategoriesSelector';
 import TagSelector, {Tag} from '../components/TagSelector';
 import BackendState from '../components/BackendState';
+import { useDropzone } from 'react-dropzone';
+
 
 const CHUNK_SIZE = 1024 * 1024; // 1 MB
 
@@ -143,6 +145,8 @@ export default function UploadPage() {
                             <input type="checkbox" checked={isPrivate} onChange={() => setIsPrivate(!isPrivate)} className="mr-2" /> Private
                         </label>
 
+
+                        
                         {file && (
                             <p className="text-sm text-gray-600">Selected file: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</p>
                         )}

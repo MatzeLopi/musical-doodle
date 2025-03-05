@@ -16,7 +16,6 @@ const Home: NextPage = () => {
     src: undefined,
     title: undefined,
   });
-  const [showInfo, setShowInfo] = useState(true);
 
   // Fetching data when the button is clicked
   const HandleClick = async (endpoint: string) => {
@@ -51,15 +50,6 @@ const Home: NextPage = () => {
       <div className="flex flex-col min-h-screen bg-gray-100">
         <Navbar />
         <BackendState />
-        {showInfo && (
-          <Info
-            message="Test"
-            onClose={() => {
-              console.log("closed");
-              setShowInfo(false);
-            }}
-          />
-        )}
 
       </div>
     </>

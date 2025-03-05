@@ -1,5 +1,10 @@
 import Navbar from '../components/Navbar';
 import BackendState from '../components/BackendState';
+import SearchComponent, {SearchFilters} from '../components/Search';
+const handleSearch = (filters: SearchFilters) => {
+    console.log('Search filters:', filters);
+    // Implement your search logic using the filters here.
+  };
 
 const Search: React.FC = () => {
     return (
@@ -7,7 +12,7 @@ const Search: React.FC = () => {
             <div className="flex flex-col min-h-screen bg-gray-100">
                 <Navbar />
                 <div className="flex justify-center">
-                    
+                <SearchComponent onSearch={handleSearch} />
                 </div>
                 <BackendState />
             </div>

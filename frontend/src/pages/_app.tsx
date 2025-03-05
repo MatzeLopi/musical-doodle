@@ -2,9 +2,16 @@ import { withTRPC } from "@trpc/next";
 import { AppType } from "next/dist/shared/lib/utils";
 import { AppRouter } from "./api/trpc/[trpc]";
 import "../styles/globals.css";
+import { AuthProvider } from "../contexts/AuthContext";
 
 const MyApp: AppType = ({ Component, pageProps }) => {
-  return <Component {...pageProps} />;
+
+  return (
+    <AuthProvider>
+      <Component {...pageProps} />
+    </AuthProvider>
+  );
+
 };
 
 export default withTRPC<AppRouter>({

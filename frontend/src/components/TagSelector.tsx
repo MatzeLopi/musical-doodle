@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { fetchFromAPI } from '../utils/communication';
@@ -14,9 +16,11 @@ interface Option {
 
 interface TagSelectorProps {
   onTagChange: (tags: Tag[]) => void;
+  // Array of tag IDs to be disabled/filtered out
+  disabledTagIds?: string[];
 }
 
-const TagSelector: React.FC<TagSelectorProps> = ({ onTagChange }) => {
+const TagSelector: React.FC<TagSelectorProps> = ({ onTagChange, disabledTagIds = [] }) => {
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
 
@@ -42,6 +46,11 @@ const TagSelector: React.FC<TagSelectorProps> = ({ onTagChange }) => {
     label: tag.name,
   }));
 
+  // Filter out options whose IDs appear in disabledTagIds
+  const filteredOptions = options.filter(
+    (option) => !disabledTagIds.includes(option.value)
+  );
+
   const handleChange = (selected: Option[] | null) => {
     const tags: Tag[] = selected
       ? selected.map((option) => ({ id: option.value, name: option.label }))
@@ -53,7 +62,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({ onTagChange }) => {
   return (
     <Select
       isMulti
-      options={options}
+      options={filteredOptions}
       value={selectedOptions}
       onChange={handleChange}
       className="mb-2"

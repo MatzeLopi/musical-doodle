@@ -1,9 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { fetchFromAPI } from '../utils/communication';
 import Navbar from '../components/Navbar';
 import BackendState from '../components/BackendState';
 import Alert from '../components/Alert';
+import { useAuth } from '../contexts/AuthContext';
+import Info from '../components/Info';
 
 const Login: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -11,8 +13,8 @@ const Login: React.FC = () => {
     const [email, setMail] = useState('');
     const [error, setError] = useState('');
     const router = useRouter();
-    const csrfFetched = useRef(false); // Prevent duplicate requests
     const [showAlert, setShowAlert] = useState(false);
+    const {isLoggedIn} = useAuth();
 
 
     const handleSubmit = async (event: React.FormEvent) => {
@@ -60,6 +62,16 @@ const Login: React.FC = () => {
             setShowAlert(true);
         }
     };
+
+    if (isLoggedIn) {
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 3000);
+        return (
+            <Info message="Already logged in. Redirecting to Home" onClose={() => { }} />
+        );
+    }
+
 
     return (
         <>

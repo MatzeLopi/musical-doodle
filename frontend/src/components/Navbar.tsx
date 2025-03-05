@@ -1,7 +1,9 @@
 import { useState } from "react"; // import state
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Header() {
     const [isNavOpen, setIsNavOpen] = useState(false); // initiate isNavOpen state with false
+    const {isLoggedIn} = useAuth();
 
     return (
         <div className="flex items-center justify-between bg-gray-600 py-8 px-4">
@@ -44,15 +46,18 @@ export default function Header() {
                             <li className="border-b border-gray-400 my-8 uppercase">
                                 <a href="/search">Search</a>
                             </li>
-                            <li className="border-b border-gray-400 my-8 uppercase">
+                            {!isLoggedIn && (<li className="border-b border-gray-400 my-8 uppercase">
                                 <a href="/login">Login</a>
-                            </li>
-                            <li className="border-b border-gray-400 my-8 uppercase">
+                            </li>)}
+                            {!isLoggedIn && (<li className="border-b border-gray-400 my-8 uppercase">
+                                <a href="/register">Register</a>
+                            </li>)}
+                            {isLoggedIn && (<li className="border-b border-gray-400 my-8 uppercase">
                                 <a href="/file">Upload</a>
-                            </li>
-                            <li className="border-b border-gray-400 my-8 uppercase">
+                            </li>)}
+                            {isLoggedIn && (<li className="border-b border-gray-400 my-8 uppercase">
                                 <a href="/me">Me</a>
-                            </li>
+                            </li>)}
                         </ul>
                     </div>
                 </section>
@@ -64,15 +69,18 @@ export default function Header() {
                     <li>
                         <a href="/search">Search</a>
                     </li>
-                    <li>
+                    {!isLoggedIn &&(<li>
                         <a href="/login">Login</a>
-                    </li>
-                    <li>
+                    </li>)}
+                    {!isLoggedIn &&(<li>
+                        <a href="/register">Register</a>
+                    </li>)}
+                    {isLoggedIn && (<li>
                         <a href="/file">Upload</a>
-                    </li>
-                    <li>
+                    </li>)}
+                    {isLoggedIn && (<li>
                         <a href="/me">Me </a>
-                    </li>
+                    </li>)}
                 </ul>
             </nav>
             <style>{`

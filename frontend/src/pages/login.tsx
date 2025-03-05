@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef,useContext } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '../components/Navbar';
 import Alert from '../components/Alert';
 import Info from '../components/Info';
 import BackendState from '../components/BackendState';
 import { fetchFromAPI } from '../utils/communication';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -12,27 +13,7 @@ const Login: React.FC = () => {
     const [error, setError] = useState('');
     const router = useRouter();
     const [showAlert, setShowAlert] = useState(false);
-    const [loggedIn, setLoggedIn] = useState(false);
-
-    useEffect(() => {
-        const checkIfLoggedIn = async () => {
-            try {
-                const response = await fetchFromAPI('/users/me');
-                if (response.status == 200) {
-                    setLoggedIn(true);
-                    setTimeout(() => {
-                        window.location.href = '/';
-                      }, 3000);
-                    return;
-                }
-
-            } catch (error) {
-                setError((error as Error).message);
-            }
-        };
-
-        checkIfLoggedIn();
-    }, [router]);
+    const {isLoggedIn, setIsLoggedIn} = useAuth();
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -56,14 +37,18 @@ const Login: React.FC = () => {
             }
 
             // Handle successful login
+            setIsLoggedIn(true);
             const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || '/';
             router.push(redirectUrl); // Redirect to the saved URL or homepage
         } catch (err) {
             setError('Login failed: ' + (err as Error).message);
         }
     };
-
-    if (loggedIn) {
+    console.log(isLoggedIn);
+    if (isLoggedIn) {
+        setTimeout(() => {
+            window.location.href = '/';
+          }, 3000);
         return (
             <>
                 <div className="flex justify-center items-center min-h-screen">

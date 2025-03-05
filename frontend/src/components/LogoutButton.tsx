@@ -5,6 +5,7 @@ const LogoutButton = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    
 
     const handleLogout = async () => {
         setLoading(true);
@@ -16,6 +17,7 @@ const LogoutButton = () => {
                 throw new Error('Logout failed');
             }
             setSuccess('Successfully logged out!');
+            window.location.href = '/';
         } catch (err) {
             if (err instanceof Error) {
                 setError(err.message);

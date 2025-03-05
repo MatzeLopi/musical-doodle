@@ -5,6 +5,7 @@ import LogoutButton from '../components/LogoutButton';
 import Info from '../components/Info';
 import Alert from '../components/Alert';
 import BackendState from '../components/BackendState';
+import { useAuth } from '../contexts/AuthContext';
 
 interface User {
     username: string;
@@ -16,6 +17,8 @@ const UserProfile = () => {
     const [user, setUser] = useState<User | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [alertMessage, setAlertMessage] = useState<string | null>(null);
+        const {isLoggedIn, setIsLoggedIn} = useAuth();
+    
 
     // Fetch user data when the component mounts
     useEffect(() => {

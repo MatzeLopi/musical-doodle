@@ -1,6 +1,7 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import Select, { SingleValue } from 'react-select';
-
 import { fetchFromAPI } from '../utils/communication';
 
 export interface Category {
@@ -15,9 +16,13 @@ interface Option {
 
 interface CategorySelectorProps {
   onCategoryChange: (category: Category | null) => void;
+  disabledCategoryIds?: string[];
 }
 
-const CategorySelector: React.FC<CategorySelectorProps> = ({ onCategoryChange }) => {
+const CategorySelector: React.FC<CategorySelectorProps> = ({
+  onCategoryChange,
+  disabledCategoryIds = [],
+}) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedOption, setSelectedOption] = useState<Option | null>(null);
 
@@ -43,6 +48,11 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ onCategoryChange })
     label: cat.name,
   }));
 
+  // Filter out options based on disabledCategoryIds
+  const filteredOptions = options.filter(
+    (option) => !disabledCategoryIds.includes(option.value)
+  );
+
   const handleChange = (option: SingleValue<Option>) => {
     setSelectedOption(option);
     const selectedCategory = option
@@ -53,9 +63,10 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ onCategoryChange })
 
   return (
     <Select
-      options={options}
+      options={filteredOptions}
       value={selectedOption}
       onChange={handleChange}
+      isClearable
       className="mb-2"
       placeholder="Select a category"
     />
