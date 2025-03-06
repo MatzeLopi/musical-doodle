@@ -102,14 +102,7 @@ pub async fn get_user_by_id(id: &Uuid, db: &PgPool) -> Result<User, HTTPError> {
 }
 
 pub async fn check_username(username: &str, db: &PgPool) -> bool {
-    /// Check if the username exists in the DB
-    ///
-    /// # Arguments
-    ///  username: &str - The username to check
-    ///  db: PgPool - The database connection pool
-    ///
-    /// # Returns
-    ///  bool - True if the username exists, false otherwise
+    log::debug!("Checking username: {}", username);
     let result = sqlx::query!("SELECT username FROM users WHERE username = $1", username)
         .fetch_one(db)
         .await;
@@ -120,7 +113,7 @@ pub async fn check_username(username: &str, db: &PgPool) -> bool {
             true
         }
         Err(e) => {
-            log::debug!("Error Checking Username: {:?}", e);
+            log::debug!("Error checking username: {:?}", e);
             false
         }
     }
@@ -144,8 +137,9 @@ pub async fn check_email(email: &str, db: &PgPool) -> bool {
             log::debug!("Email exists: {:?}", result);
             true
         }
+
         Err(e) => {
-            log::error!("Error Checking Email: {:?}", e);
+            log::debug!("Error Checking Email: {:?}", e);
             false
         }
     }

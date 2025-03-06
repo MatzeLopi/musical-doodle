@@ -1,7 +1,8 @@
 use crate::{
     crud,
     http::{dependencies, error::Error as HTTPError, AppState},
-    schemas::users::{NewUser, User},
+    schemas::{Payload,
+        users::{NewUser, User}},
 };
 use axum::{
     extract::{Json, Path, State},
@@ -11,6 +12,8 @@ use axum::{
 };
 use std::sync::Arc;
 use uuid::Uuid;
+use serde::Deserialize;
+
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -66,8 +69,9 @@ async fn create_user(
 async fn update_password(
     State(state): State<Arc<AppState>>,
     user: dependencies::AuthUser,
-    password: String,
+    Json(password): Json<Payload<String>>,
 ) -> Result<impl IntoResponse, HTTPError> {
+    let password = password.payload;
     let pw_hash = dependencies::hash_password(password)?;
     if crud::user::update_password(&user.user_id, &pw_hash, &state.db).await? == true {
         Ok(StatusCode::OK)
@@ -79,24 +83,27 @@ async fn update_password(
 
 async fn username_available(
     State(state): State<Arc<AppState>>,
-    username: String,
+    Json(username): Json<Payload<String>>,
 ) -> Result<impl IntoResponse, HTTPError> {
+    let username = username.payload;
     match crud::user::check_username(&username, &state.db).await {
         false => {
             log::debug!("Username is available");
             Ok(StatusCode::OK)
         }
-        true => Ok({
+        true => {
             log::debug!("Username is taken");
-            StatusCode::CONFLICT
-        }),
+            Ok(StatusCode::CONFLICT)
+        },
     }
 }
 
+
 async fn email_available(
     State(state): State<Arc<AppState>>,
-    email: String,
+    Json(email): Json<Payload<String>> ,
 ) -> Result<impl IntoResponse, HTTPError> {
+    let email = email.payload;
     match crud::user::check_email(&email, &state.db).await {
         false => {
             log::debug!("Email is available");
