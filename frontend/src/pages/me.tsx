@@ -17,8 +17,8 @@ const UserProfile = () => {
     const [user, setUser] = useState<User | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [alertMessage, setAlertMessage] = useState<string | null>(null);
-        const {isLoggedIn, setIsLoggedIn} = useAuth();
-    
+    const { isLoggedIn, setIsLoggedIn } = useAuth();
+
 
     // Fetch user data when the component mounts
     useEffect(() => {
@@ -30,8 +30,8 @@ const UserProfile = () => {
                     setAlertMessage('Not logged in. Redirecting to login...');
                     setTimeout(() => {
                         window.location.href = '/login';
-                      }, 3000);
-                      return;
+                    }, 3000);
+                    return;
                 }
 
                 let json = await data.json();

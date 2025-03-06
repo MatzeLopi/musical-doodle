@@ -3,31 +3,48 @@ import { useAuth } from "../contexts/AuthContext";
 
 export default function Header() {
     const [isNavOpen, setIsNavOpen] = useState(false); // initiate isNavOpen state with false
-    const {isLoggedIn} = useAuth();
+    const { isLoggedIn } = useAuth();
 
     return (
-        <div className="flex items-center justify-between bg-gray-600 py-8 px-4">
+        <div className="flex items-center justify-between bg-zinc-100 dark:bg-zinc-900 py-8 px-4">
             <a href="/">
-                <img alt="logo" />
+                <svg className="w-12 h-12" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" fill="none" stroke-linecap="round">
+                    <defs>
+                        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#ff416c" />
+                            <stop offset="100%" stop-color="#ff4b2b" />
+                        </linearGradient>
+                    </defs>
+
+                    <path d="M50 100 Q75 50, 100 100 T150 100" stroke="url(#grad)" stroke-width="8" fill="none" />
+                    <path d="M60 110 Q85 60, 110 110 T140 110" stroke="url(#grad)" stroke-width="6" fill="none" />
+
+                    <path d="M75 120 Q100 140, 125 120 Q100 130, 75 120 Z" fill="url(#grad)" stroke="#ff4b2b" stroke-width="2" />
+                </svg>
+
             </a>
             <nav>
+                {/* Mobile Menu */}
                 <section className="MOBILE-MENU flex lg:hidden">
                     <div
                         className="HAMBURGER-ICON space-y-2"
-                        onClick={() => setIsNavOpen((prev) => !prev)} // toggle isNavOpen state on click
+                        onClick={() => setIsNavOpen((prev) => !prev)}
                     >
-                        <span className="block h-0.5 w-8 animate-pulse bg-white"></span>
-                        <span className="block h-0.5 w-8 animate-pulse bg-white"></span>
-                        <span className="block h-0.5 w-8 animate-pulse bg-white"></span>
+                        <span className="block h-0.5 w-8 bg-zinc-900 dark:bg-zinc-100"></span>
+                        <span className="block h-0.5 w-8 bg-zinc-900 dark:bg-zinc-100"></span>
+                        <span className="block h-0.5 w-8 bg-zinc-900 dark:bg-zinc-100"></span>
                     </div>
 
-                    <div className={isNavOpen ? "showMenuNav" : "hideMenuNav"}> 
+                    <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center transition-all duration-300 
+${isNavOpen ? "bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100" : "hidden"}`}>
+
+
                         <div
-                            className="CROSS-ICON absolute top-0 right-0 px-8 py-8"
-                            onClick={() => setIsNavOpen(false)} // change isNavOpen state to false to close the menu
+                            className="absolute top-4 right-4 p-2"
+                            onClick={() => setIsNavOpen(false)}
                         >
                             <svg
-                                className="h-8 w-8 text-gray-600"
+                                className="h-8 w-8 text-zinc-900 dark:text-zinc-100"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -39,69 +56,70 @@ export default function Header() {
                                 <line x1="6" y1="6" x2="18" y2="18" />
                             </svg>
                         </div>
-                        <ul className="MENU-LINK-MOBILE-OPEN flex flex-col items-center justify-between min-h-[250px]">
-                            <li className="border-b border-gray-400 my-8 uppercase">
-                                <a href="/">Feed</a>
+
+                        <ul className="flex flex-col items-center space-y-6 text-lg font-medium">
+                            <li>
+                                <a href="/" className="hover:text-purple-500">Feed</a>
                             </li>
-                            <li className="border-b border-gray-400 my-8 uppercase">
-                                <a href="/search">Search</a>
+                            <li>
+                                <a href="/search" className="hover:text-purple-500">Search</a>
                             </li>
-                            {!isLoggedIn && (<li className="border-b border-gray-400 my-8 uppercase">
-                                <a href="/login">Login</a>
-                            </li>)}
-                            {!isLoggedIn && (<li className="border-b border-gray-400 my-8 uppercase">
-                                <a href="/register">Register</a>
-                            </li>)}
-                            {isLoggedIn && (<li className="border-b border-gray-400 my-8 uppercase">
-                                <a href="/file">Upload</a>
-                            </li>)}
-                            {isLoggedIn && (<li className="border-b border-gray-400 my-8 uppercase">
-                                <a href="/me">Me</a>
-                            </li>)}
+                            {!isLoggedIn && (
+                                <li>
+                                    <a href="/login" className="hover:text-purple-500">Login</a>
+                                </li>
+                            )}
+                            {!isLoggedIn && (
+                                <li>
+                                    <a href="/register" className="hover:text-purple-500">Register</a>
+                                </li>
+                            )}
+                            {isLoggedIn && (
+                                <li>
+                                    <a href="/file" className="hover:text-purple-500">Upload</a>
+                                </li>
+                            )}
+                            {isLoggedIn && (
+                                <li>
+                                    <a href="/me" className="hover:text-purple-500">Me</a>
+                                </li>
+                            )}
                         </ul>
                     </div>
                 </section>
 
-                <ul className="DESKTOP-MENU hidden space-x-8 lg:flex uppercase">
+                {/* Desktop Menu */}
+                <ul className="DESKTOP-MENU hidden space-x-8 lg:flex uppercase text-zinc-900 dark:text-zinc-100">
                     <li>
-                        <a href="/">Feed</a>
+                        <a href="/" className="hover:text-purple-500">Feed</a>
                     </li>
                     <li>
-                        <a href="/search">Search</a>
+                        <a href="/search" className="hover:text-purple-500">Search</a>
                     </li>
-                    {!isLoggedIn &&(<li>
-                        <a href="/login">Login</a>
-                    </li>)}
-                    {!isLoggedIn &&(<li>
-                        <a href="/register">Register</a>
-                    </li>)}
-                    {isLoggedIn && (<li>
-                        <a href="/file">Upload</a>
-                    </li>)}
-                    {isLoggedIn && (<li>
-                        <a href="/me">Me </a>
-                    </li>)}
+                    {!isLoggedIn && (
+                        <li>
+                            <a href="/login" className="hover:text-purple-500">Login</a>
+                        </li>
+                    )}
+                    {!isLoggedIn && (
+                        <li>
+                            <a href="/register" className="hover:text-purple-500">Register</a>
+                        </li>
+                    )}
+                    {isLoggedIn && (
+                        <li>
+                            <a href="/file" className="hover:text-purple-500">Upload</a>
+                        </li>
+                    )}
+                    {isLoggedIn && (
+                        <li>
+                            <a href="/me" className="hover:text-purple-500">Me</a>
+                        </li>
+                    )}
                 </ul>
             </nav>
-            <style>{`
-      .hideMenuNav {
-        display: none;
-      }
-      .showMenuNav {
-        display: block;
-        position: absolute;
-        width: 100%;
-        height: 100vh;
-        top: 0;
-        left: 0;
-        background: white;
-        z-index: 10;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-evenly;
-        align-items: center;
-      }
-    `}</style>
         </div>
+
+
     );
 }

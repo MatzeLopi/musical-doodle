@@ -14,7 +14,7 @@ const Login: React.FC = () => {
     const [error, setError] = useState('');
     const router = useRouter();
     const [showAlert, setShowAlert] = useState(false);
-    const {isLoggedIn} = useAuth();
+    const { isLoggedIn } = useAuth();
 
 
     const handleSubmit = async (event: React.FormEvent) => {
@@ -75,15 +75,15 @@ const Login: React.FC = () => {
 
     return (
         <>
-            <div className="flex flex-col min-h-screen bg-gray-100">
+            <div className="flex flex-col min-h-screen bg-zinc-100 dark:bg-zinc-900">
                 <Navbar />
                 <div className="flex items-center justify-center m-auto">
 
-                    <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-                        <h2 className="text-2xl font-bold text-center text-gray-900">Register</h2>
+                    <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-zinc-800 rounded-lg shadow-md">
+                        <h2 className="text-2xl font-bold text-center text-zinc-900 dark:text-zinc-100">Register</h2>
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Username:</label>
+                                <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">Username:</label>
                                 <input
                                     type="username"
                                     value={username}
@@ -132,13 +132,13 @@ const Login: React.FC = () => {
                     </div>
                 </div>
                 {showAlert && (
-                <Alert
-                    message={error}
-                    onClose={() => {
-                    console.log("closed");
-                    setShowAlert(false);
-                    }}
-                />
+                    <Alert
+                        message={error}
+                        onClose={() => {
+                            console.log("closed");
+                            setShowAlert(false);
+                        }}
+                    />
                 )}
                 <BackendState />
 

@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { fetchFromAPI } from '../utils/communication';
 
 const LogoutButton = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
-    
 
     const handleLogout = async () => {
         setLoading(true);
@@ -17,41 +16,32 @@ const LogoutButton = () => {
                 throw new Error('Logout failed');
             }
             setSuccess('Successfully logged out!');
-            window.location.href = '/';
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1500); // Redirect after a delay to show success message
         } catch (err) {
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError('An unknown error occurred');
-            }
+            setError(err instanceof Error ? err.message : 'An unknown error occurred');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleOnClick = () => {
-        handleLogout();
-        window.location.reload();
-    };
-
-    // Function to hide the alert after a delay
-    const hideAlert = () => {
-        setTimeout(() => {
-            setSuccess(null);
-            setError(null);
-        }, 3000); // Hides after 3 seconds
-    };
-
-    // Call hideAlert whenever success or error is set
-    if (success || error) {
-        hideAlert();
-    }
+    // Hide alerts automatically after 3 seconds
+    useEffect(() => {
+        if (success || error) {
+            const timer = setTimeout(() => {
+                setSuccess(null);
+                setError(null);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [success, error]);
 
     return (
         <div className="relative">
             <button
-                onClick={handleOnClick}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 transition duration-300 sm:px-6 sm:py-3"
+                onClick={handleLogout}
+                className="px-4 py-2 sm:px-6 sm:py-3 text-white bg-rose-600 rounded-lg shadow-md hover:bg-rose-700 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 disabled:opacity-50"
                 disabled={loading}
             >
                 {loading ? 'Logging out...' : 'Logout'}
@@ -60,20 +50,15 @@ const LogoutButton = () => {
             {/* Success Alert */}
             {success && (
                 <div className="fixed inset-0 flex justify-center items-center z-50">
-                    <div className="bg-green-100 text-green-700 p-6 rounded-lg shadow-md flex items-center space-x-3">
+                    <div className="bg-emerald-600 text-white p-6 rounded-lg shadow-lg flex items-center space-x-3 animate-fade-in">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-6 w-6 text-green-600"
+                            className="h-6 w-6 text-white"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
                         >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M5 13l4 4L19 7"
-                            />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                         </svg>
                         <span>{success}</span>
                     </div>
@@ -83,25 +68,31 @@ const LogoutButton = () => {
             {/* Error Alert */}
             {error && (
                 <div className="fixed inset-0 flex justify-center items-center z-50">
-                    <div className="bg-red-100 text-red-700 p-6 rounded-lg shadow-md flex items-center space-x-3">
+                    <div className="bg-rose-600 text-white p-6 rounded-lg shadow-lg flex items-center space-x-3 animate-fade-in">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-6 w-6 text-red-600"
+                            className="h-6 w-6 text-white"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
                         >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                         <span>{error}</span>
                     </div>
                 </div>
             )}
+
+            {/* Smooth Fade-in Animation */}
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(-10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in {
+                    animation: fadeIn 0.3s ease-out;
+                }
+            `}</style>
         </div>
     );
 };

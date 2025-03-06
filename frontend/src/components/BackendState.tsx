@@ -28,14 +28,26 @@ const ServerStatus = () => {
         <>
             {/* Conditionally render the popup when the server is down */}
             {!isAvailable && (
-                <div className="fixed bottom-5 right-5 bg-red-600 text-white text-sm px-4 py-2 rounded-lg shadow-md opacity-60 max-w-xs md:max-w-sm">
-                    <p className="font-medium">
+                <div className="fixed bottom-5 right-5 bg-rose-600 text-white text-sm px-5 py-3 rounded-xl shadow-lg opacity-80 hover:opacity-100 transition-all max-w-xs md:max-w-sm animate-slide-up">
+                    <p className="font-semibold">
                         Cannot reach the server. <br />
                         Please try again later.
                     </p>
                 </div>
             )}
+
+            {/* Animation for smooth appearance */}
+            <style>{`
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+    `}</style>
         </>
+
     );
 };
 
