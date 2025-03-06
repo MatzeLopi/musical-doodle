@@ -36,6 +36,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onSearch }) => {
       title,
     });
   };
+  
 
   return (<form
     onSubmit={handleSubmit}
@@ -113,7 +114,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onSearch }) => {
     <div className="flex flex-col">
       <button
         type="submit"
-        className="px-4 py-2 bg-purple-600 text-white rounded-md shadow-md hover:bg-purple-700 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 whitespace-nowrap"
+        className="w-full px-4 py-2 text-white bg-rose-600 rounded-md hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500"
       >
         Search
       </button>

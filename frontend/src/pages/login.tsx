@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '../components/Navbar';
-import Alert from '../components/Alert';
 import Info from '../components/Info';
 import BackendState from '../components/BackendState';
-import { fetchFromAPI } from '../utils/communication';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
@@ -12,8 +10,9 @@ const Login: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const router = useRouter();
-    const [showAlert, setShowAlert] = useState(false);
     const { isLoggedIn, setIsLoggedIn } = useAuth();
+    const [justLoggedIn, setJustLoggedIn] = useState(false);
+    
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -38,28 +37,24 @@ const Login: React.FC = () => {
 
             // Handle successful login
             setIsLoggedIn(true);
-            const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || '/';
-            router.push(redirectUrl); // Redirect to the saved URL or homepage
+            setJustLoggedIn(true);
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1500);
         } catch (err) {
             setError('Login failed: ' + (err as Error).message);
         }
     };
-    console.log(isLoggedIn);
-    if (isLoggedIn) {
+
+    if (isLoggedIn && !justLoggedIn) {
         setTimeout(() => {
             window.location.href = '/';
-        }, 3000);
-        return (
-            <>
-                <div className="flex justify-center items-center min-h-screen">
-                    <Info message="Already logged in. Redirecting to Home" onClose={() => { }} />
-                </div>
-            </>
-        );
-    }
+        }, 1500);
+    } 
 
     return (
-        <>
+        <> 
+        
             <div className="flex flex-col min-h-screen bg-zinc-100 dark:bg-zinc-900">
                 <Navbar />
                 <div className="flex items-center justify-center m-auto">
@@ -117,17 +112,22 @@ const Login: React.FC = () => {
                         </form>
                     </div>
                 </div>
-
-                {/* Alert */}
-                {showAlert && (
-                    <Alert
-                        message={error}
-                        onClose={() => setShowAlert(false)}
-                    />
-                )}
-
                 <BackendState />
+
             </div>
+            {/* Alert */}
+            {justLoggedIn && (
+                <Info type = "success" message="Login successful. Redirecting to Home" onClose={() => { }} />
+            )}
+            {
+            (isLoggedIn && !justLoggedIn) &&(
+                <Info type='info' message="Already logged in. Redirecting to Home" onClose={() => { }} />    
+            )}
+            {error && (
+                <Info type='error' message={error} onClose={() => setError('')}/>
+            )}
+
+
         </>
 
     );

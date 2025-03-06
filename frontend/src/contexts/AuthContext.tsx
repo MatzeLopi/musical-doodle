@@ -1,12 +1,12 @@
 import { createContext, useState, useContext, useEffect } from "react";
-import { fetchFromAPI } from "../utils/communication"; // your API helper
+import { fetchFromAPI } from "../utils/communication";
 
 interface AuthContextType {
   isLoggedIn: boolean;
   setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
+  loading: boolean;
 }
 
-// Create a context with a default value that could be undefined.
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
@@ -15,25 +15,38 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const value = { isLoggedIn, setIsLoggedIn };
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let timeout: NodeJS.Timeout;
+
     async function checkLogin() {
       try {
-       const response = await fetchFromAPI("/users/me");
-        if (response.status ==200
-        ) {
+        const response = await fetchFromAPI("/users/me");
+
+        if (response.status === 200) {
           setIsLoggedIn(true);
         }
       } catch (error) {
-        // token invalid or error occurred
         setIsLoggedIn(false);
+      } finally {
+        clearTimeout(timeout); // Prevent timeout from triggering if request finishes
+        setLoading(false);
       }
     }
+
     checkLogin();
+
+    // Set timeout to prevent infinite loading
+    timeout = setTimeout(() => {
+      console.warn("Authentication check timed out.");
+      setLoading(false); // Stop loading state after X seconds
+    }, 5000); // Adjust timeout duration as needed (e.g., 5000ms = 5 seconds)
+
+    return () => clearTimeout(timeout); // Cleanup timeout on unmount
   }, []);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ isLoggedIn, setIsLoggedIn, loading }}>{children}</AuthContext.Provider>;
 }
 
 // Custom hook for easier usage of the auth context.

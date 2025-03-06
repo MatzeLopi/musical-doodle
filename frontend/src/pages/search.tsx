@@ -9,9 +9,9 @@ const handleSearch = (filters: SearchFilters) => {
 const Search: React.FC = () => {
     return (
         <>
-            <div className="flex flex-col min-h-screen bg-gray-100">
+            <div className="flex flex-col min-h-screen bg-zinc-100 dark:bg-zinc-900">
                 <Navbar />
-                <div className="flex justify-center">
+                <div className="flex justify-center p-4">
                 <SearchComponent onSearch={handleSearch} />
                 </div>
                 <BackendState />
