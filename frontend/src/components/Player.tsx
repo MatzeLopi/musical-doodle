@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { usePlayer } from '../contexts/PlayerContext';
 
 const Player: React.FC = () => {
@@ -6,8 +6,62 @@ const Player: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  // Phase used to animate the played portion (sine wave)
+  const [phase, setPhase] = useState(0);
 
-  // Helper to format seconds into mm:ss
+  // SVG and wave parameters.
+  const viewBoxWidth = 120;
+  const viewBoxHeight = 20;
+  const amplitude = 2; // amplitude of the wave
+  const center = viewBoxHeight / 2; // vertical center
+  const period = 12; // period length in viewBox units
+
+  // Update the phase continuously when playing.
+  useEffect(() => {
+    let animationFrame: number;
+    const phaseSpeed = 0.05; // adjust for faster or slower fluctuation
+
+    const updatePhase = () => {
+      setPhase(prev => prev + phaseSpeed);
+      animationFrame = requestAnimationFrame(updatePhase);
+    };
+
+    if (isPlaying) {
+      animationFrame = requestAnimationFrame(updatePhase);
+    }
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isPlaying]);
+
+  // Generate a high-resolution sine wave path between startX and endX.
+  const generateWaveSegment = useCallback(
+    (startX: number, endX: number, phase: number) => {
+      let d = "";
+      for (let x = startX; x <= endX; x += 0.5) {
+        const y = center + amplitude * Math.sin((Math.PI * 2 * x) / period + phase);
+        d += x === startX ? `M${x.toFixed(2)},${y.toFixed(2)}` : ` L${x.toFixed(2)},${y.toFixed(2)}`;
+      }
+      return d;
+    },
+    [amplitude, center, period]
+  );
+
+  // Calculate the current x position based on progress.
+  const currentX = (progress / (duration || 1)) * viewBoxWidth;
+  // Played portion as an animated sine wave.
+  const playedPath = isPlaying && currentX > 0 
+    ? generateWaveSegment(0, currentX, phase)
+    : `M0,${center} L${currentX},${center}`;
+  // Upcoming portion as a flat line.
+  const upcomingPath = `M${currentX.toFixed(2)},${center} L${viewBoxWidth},${center}`;
+
+  // Indicator is a vertical bar fixed on the flat (upcoming) segment.
+  const indicatorWidth = 2;
+  const indicatorHeight = 10;
+  const indicatorX = currentX - indicatorWidth / 2;
+  const indicatorY = center - indicatorHeight / 2;
+
+  // Helper: Format seconds into mm:ss.
   const formatTime = (time: number) => {
     if (isNaN(time)) return '0:00';
     const minutes = Math.floor(time / 60);
@@ -15,15 +69,13 @@ const Player: React.FC = () => {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
-
   useEffect(() => {
     if (audioRef.current) {
       isPlaying ? audioRef.current.play() : audioRef.current.pause();
     }
   }, [isPlaying]);
 
-  
-  // Toggle play/pause state
+  // Toggle play/pause.
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
   };
@@ -32,23 +84,20 @@ const Player: React.FC = () => {
     const audio = audioRef.current;
     if (audio) {
       const handleTimeUpdate = () => {
-        console.log("Time update", audio.currentTime);
         setProgress(audio.currentTime);
       };
       const handleLoadedMetadata = () => {
-        console.log("Metadata loaded", audio.duration);
         setDuration(audio.duration);
       };
       const handleEnded = () => {
-        console.log("Track ended");
         setIsPlaying(false);
         setProgress(0);
       };
-  
+
       audio.addEventListener('timeupdate', handleTimeUpdate);
       audio.addEventListener('loadedmetadata', handleLoadedMetadata);
       audio.addEventListener('ended', handleEnded);
-  
+
       return () => {
         audio.removeEventListener('timeupdate', handleTimeUpdate);
         audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
@@ -57,13 +106,12 @@ const Player: React.FC = () => {
     }
   }, [currentTrack, setIsPlaying]);
 
-  // Reset audio element when the current track changes
+  // Reset audio element when the current track changes.
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.load();
       setProgress(0);
-      // If metadata is already loaded, set duration immediately.
       if (audioRef.current.readyState >= 1) {
         setDuration(audioRef.current.duration);
       }
@@ -73,7 +121,7 @@ const Player: React.FC = () => {
     }
   }, [currentTrack]);
 
-  // Handle seek bar changes
+  // Handle seek changes.
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = parseFloat(e.target.value);
     if (audioRef.current) {
@@ -82,25 +130,19 @@ const Player: React.FC = () => {
     }
   };
 
-  // If no track is set, don’t render the player.
   if (!currentTrack) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-800 p-4 shadow-lg">
-      {/* Audio element with track URL */}
+      {/* Audio element */}
       <audio ref={audioRef} src={currentTrack.url} preload="metadata" key={currentTrack.id} />
-      
-      {/* Header: Grid with three columns for spacing */}
-      <div className="grid grid-cols-3 items-center px-4 max-w-md  lg:max-w-lg justify-center mx-auto">
-        {/* Empty left column */}
+
+      {/* Header */}
+      <div className="grid grid-cols-3 items-center px-4 max-w-md lg:max-w-lg justify-center mx-auto">
         <div></div>
-        {/* Centered title */}
         <div className="text-center">
-          <h4 className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">
-            {currentTrack.title}
-          </h4>
+          <h4 className="text-zinc-900 dark:text-zinc-100 font-semibold text-lg">{currentTrack.title}</h4>
         </div>
-        {/* Play/Pause button on the right */}
         <div className="flex justify-end">
           <button
             onClick={togglePlay}
@@ -131,24 +173,38 @@ const Player: React.FC = () => {
 
       {/* Progress Bar with Time Labels */}
       <div className="mt-4 flex items-center justify-between w-full max-w-sm lg:max-w-lg mx-auto">
-        <span className="text-sm text-zinc-900 dark:text-zinc-100">
-          {formatTime(progress)}
-        </span>
-        <input
-          type="range"
-          min="0"
-          max={duration || 0}
-          value={progress}
-          onChange={handleSeek}
-          onInput={handleSeek}
-          className="mx-2 w-full h-1 cursor-pointer appearance-none bg-transparent"
-        />
-        <span className="text-sm text-zinc-900 dark:text-zinc-100">
-          {formatTime(duration)}
-        </span>
+        <span className="text-sm text-zinc-900 dark:text-zinc-100">{formatTime(progress)}</span>
+        <div className="relative mx-2 w-full" style={{ height: `${viewBoxHeight}px` }}>
+          <svg className="w-full h-full" viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`} preserveAspectRatio="none">
+            {isPlaying ? (
+              <>
+                {/* Played portion as an animated sine wave */}
+                <path d={playedPath} fill="none" stroke="#a1a1aa" strokeWidth="1" />
+                {/* Upcoming portion as a flat line */}
+                <path d={upcomingPath} fill="none" stroke="#a1a1aa" strokeWidth="1" />
+              </>
+            ) : (
+              // When paused, display a complete flat line.
+              <path d={`M0,${center} L${viewBoxWidth},${center}`} fill="none" stroke="#a1a1aa" strokeWidth="1" />
+            )}
+            {/* Indicator bar on the flat line */}
+            <rect x={indicatorX} y={center - indicatorHeight / 2} width={1} height={indicatorHeight} className='fill-zinc-900 dark:fill-zinc-100' />
+          </svg>
+          {/* Invisible range input overlay for seeking */}
+          <input
+            type="range"
+            min="0"
+            max={duration || 0}
+            value={progress}
+            onChange={handleSeek}
+            onInput={handleSeek}
+            className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+          />
+        </div>
+        <span className="text-sm text-zinc-900 dark:text-zinc-100">{formatTime(duration)}</span>
       </div>
 
-      {/* Custom Styles for the Range Input */}
+      {/* Custom Styles */}
       <style jsx>{`
         input[type="range"] {
           -webkit-appearance: none;
