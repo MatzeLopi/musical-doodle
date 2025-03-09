@@ -3,11 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Select, { MultiValue, StylesConfig } from 'react-select';
 import { fetchFromAPI } from '../utils/communication';
-
-export interface Tag {
-  id: string;
-  name: string;
-}
+import { Tag } from './types';
 
 interface Option {
   value: string;

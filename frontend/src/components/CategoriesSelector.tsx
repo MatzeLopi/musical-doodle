@@ -3,11 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Select, { SingleValue, StylesConfig } from 'react-select';
 import { fetchFromAPI } from '../utils/communication';
-
-export interface Category {
-  id: string;
-  name: string;
-}
+import { Category } from './types';
 
 interface Option {
   value: string;

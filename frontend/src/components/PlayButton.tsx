@@ -1,28 +1,42 @@
 import React from 'react';
+import { usePlayer, Track } from '../contexts/PlayerContext';
 
 interface PlayButtonProps {
-    func: () => void;
+  track: Track;
 }
 
-const PlayButton: React.FC<PlayButtonProps> = (func) => {
-    return (
-        <button
-            onClick={() => func}
-            className="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-400 transition focus:outline-none"
-        >
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-            >
-                <path
-                    fillRule="evenodd"
-                    d="M8.286 3.407A1.5 1.5 0 0 0 6 4.684v14.632a1.5 1.5 0 0 0 2.286 1.277l11.888-7.316a1.5 1.5 0 0 0 0-2.555L8.286 3.407z"
-                    clipRule="evenodd"
-                />
-            </svg>
-        </button>
-    );
+const PlayButton: React.FC<PlayButtonProps> = ({ track }) => {
+  const { currentTrack, setCurrentTrack, isPlaying, setIsPlaying } = usePlayer();
+
+  const handleClick = () => {
+    if (currentTrack?.id !== track.id) {
+      // Set the new track and start playback if it's not the current one.
+      setCurrentTrack(track);
+      setIsPlaying(true);
+    } else {
+      // Toggle play/pause if it's the same track.
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="w-12 h-12 bg-rose-600 text-white rounded-md flex items-center justify-center hover:bg-rose-700 transition"
+    >
+      {currentTrack?.id === track.id && isPlaying ? (
+        // Pause Icon
+        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M6 4h4v12H6V4zm6 0h4v12h-4V4z" />
+        </svg>
+      ) : (
+        // Play Icon
+        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M5 3l12 7-12 7V3z" />
+        </svg>
+      )}
+    </button>
+  );
 };
+
 export default PlayButton;

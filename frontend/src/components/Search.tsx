@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import TagSelector, { Tag } from './TagSelector';
-import CategorySelector, { Category } from './CategoriesSelector';
+import TagSelector from './TagSelector';
+import CategorySelector from './CategoriesSelector';
+import { Category, Tag } from './types';
 
 export interface SearchFilters {
   tagsIncluded: Tag[];

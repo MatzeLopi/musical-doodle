@@ -4,6 +4,7 @@ import Navbar from "../components/Navbar";
 import LogoutButton from "../components/LogoutButton";
 import BackendState from "../components/BackendState";
 import Info from "../components/Info";
+import AnimatedLogo from "../components/AnimatedLogo";
 
 interface User {
     username: string;
@@ -46,8 +47,9 @@ const UserProfile = () => {
     // Show loading if user data is not yet fetched
     if (!user) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
-                <p>Loading...</p>
+            <div className="flex flex-col justify-center items-center min-h-screen bg-zinc-100 dark:bg-zinc-900">
+                <AnimatedLogo size={200} />
+                <p className="mt-4 text-zinc-900 dark:text-zinc-100">Loading...</p>
             </div>
         );
     }
