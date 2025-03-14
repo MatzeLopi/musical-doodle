@@ -14,6 +14,20 @@ pub struct UploadChunk {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct QueryParams {
+    pub creator: Option<String>,
+    pub title: Option<String>,
+    pub categories_included: Option<Vec<Category>>,
+    pub categories_excluded: Option<Vec<Category>>,
+    pub tags_included: Option<Vec<Tag>>,
+    pub tags_excluded: Option<Vec<Tag>>,
+    pub private: Option<bool>,
+    pub sort_by: Option<String>,
+    pub page: Option<f64>,
+    pub page_size: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UploadAudioMetadata {
     pub id: Option<Uuid>,
     pub title: String,
@@ -25,13 +39,13 @@ pub struct UploadAudioMetadata {
     pub total_chunks: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Category {
     pub id: Uuid,
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Tag {
     pub id: Uuid,
     pub name: String,

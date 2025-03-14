@@ -3,8 +3,8 @@ use crate::{
     http::{dependencies, error::Error as HTTPError, utils, AppState},
     schemas::{
         audios::{
-            Audio, Category, Tag, UpdateCategory, UpdateDescription, UpdateTags, UpdateTitle,
-            UploadAudioMetadata, UploadChunk,
+            Audio, Category, QueryParams, Tag, UpdateCategory, UpdateDescription, UpdateTags,
+            UpdateTitle, UploadAudioMetadata, UploadChunk,
         },
         Payload,
     },
@@ -57,8 +57,33 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/sound/tags/create", post(create_tag))
         .route("/sound/categories", get(get_categories))
         .route("/sound/categories/create", post(create_category))
-        //.route("/sound/status", get(get_status))
+        .route("/sound/status", post(get_status))
+        .route("/sound/search", post(search))
         .with_state(state)
+}
+
+async fn search(
+    State(state): State<Arc<AppState>>,
+    Json(query): Json<QueryParams>,
+) -> Result<impl IntoResponse, HTTPError> {
+    let page = query.page.unwrap_or(1.0);
+    let page_size = query.page_size.unwrap_or(20.0);
+    let tracks = audio::search(&state.db, query, page, page_size).await;
+    match tracks {
+        Ok(tracks) => Ok((StatusCode::OK, Json(tracks))),
+        Err(e) => Err(e),
+    }
+}
+
+async fn get_status(
+    State(state): State<Arc<AppState>>,
+    Json(track_id): Json<Payload<Uuid>>,
+) -> Result<impl IntoResponse, HTTPError> {
+    let status = audio::get_status(&state.db, track_id.payload).await;
+    match status {
+        Ok(status) => Ok((StatusCode::OK, Json(status))),
+        Err(e) => Err(e),
+    }
 }
 
 async fn get_tags(State(state): State<Arc<AppState>>) -> Result<impl IntoResponse, HTTPError> {
@@ -157,6 +182,8 @@ async fn to_backblaze(
 
     log::debug!("Stream response: {:?}", stream_resp);
 
+    todo("Update function to set the audiolink correctly -> Currently not the backblaze link");
+
     match stream_resp.status_code() {
         code if code < 300 && code >= 200 => {
             _ = remove_file(&file_path).await.map_err(|e| {
@@ -224,7 +251,6 @@ async fn upload(
     })?;
 
     let file_path = format!("{}/{}.{}", UPLOAD_DIR, id.simple().to_string(), part.ext);
-    log::debug!("Raw Protobuf received: {:?}", part);
     // First, get the reference to the RwLock, and hold it longer.
     let locks = FILE_LOCKS.read().await;
 
@@ -270,7 +296,6 @@ async fn upload(
     let mut counter_guard = counter.lock().await;
     *counter_guard += 1; // Increment the counter for the file
 
-    log::debug!("File {} has received chunk {}", id, *counter_guard);
     drop(counter_guard);
 
     Ok(StatusCode::CREATED)

@@ -1,11 +1,14 @@
 use crate::{
     http::error::Error as HTTPError,
-    schemas::audios::{Audio, Category, Tag},
+    schemas::{
+        audios::{Audio, Category, QueryParams, Tag},
+        Page,
+    },
 };
 use futures::TryFutureExt;
 use itertools;
 use serde::{Deserialize, Serialize};
-use sqlx::{postgres::PgRow, FromRow, PgPool, Row};
+use sqlx::{postgres::PgRow, FromRow, PgPool, Postgres, QueryBuilder, Row};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::Type)]
@@ -33,13 +36,191 @@ impl FromRow<'_, PgRow> for AudioStatus {
     }
 }
 
-pub async fn search(db: &PgPool) -> Result<Vec<Audio>, HTTPError> {
-    let result = sqlx::query!("Select")
-        .fetch_all(db)
-        .map_err(HTTPError::from)
-        .await;
+pub async fn search(
+    db: &PgPool,
+    params: QueryParams,
+    page: f64,
+    page_size: f64,
+) -> Result<Page<Audio>, HTTPError> {
+    // Start building the base query from tracks
+    log::debug!("Searching audios with params: {:?}", params);
 
-    todo!();
+    let mut qb: QueryBuilder<Postgres> = QueryBuilder::new(
+        "SELECT 
+            t.track_id, 
+            t.title, 
+            t.creator_id AS creator, 
+            t.description, 
+            t.audio_url, 
+            t.private, 
+            json_build_object('id', c.category_id, 'name', c.name) AS category, 
+            COALESCE(
+                jsonb_agg(jsonb_build_object('id', tg.tag_id, 'name', tg.name))
+                    FILTER (WHERE tg.tag_id IS NOT NULL),
+                '[]'
+            ) AS tags
+        FROM tracks t
+        JOIN users u ON t.creator_id = u.user_id
+        JOIN categories c ON t.category_id = c.category_id
+        LEFT JOIN track_tags tt ON t.track_id = tt.track_id
+        LEFT JOIN tags tg ON tg.tag_id = tt.tag_id
+        WHERE 1=1
+        AND t.private = false",
+    );
+
+    // Filter by creator name
+    if let Some(creator) = params.creator {
+        qb.push(" AND u.username LIKE lower(")
+            .push_bind(format!("%{}%", creator));
+        qb.push(")");
+    }
+
+    // Filter by track title
+    if let Some(title) = params.title {
+        qb.push(" AND t.title LIKE lower(")
+            .push_bind(format!("%{}%", title));
+        qb.push(")");
+    }
+
+    // For tags_included: ensure the track has all the provided tag IDs
+    if let Some(tags) = params.tags_included {
+        qb.push(" AND (SELECT COUNT(*) FROM track_tags tt2 WHERE tt2.track_id = t.track_id AND tt2.tag_id = ANY(")
+          .push_bind(
+              tags.clone()
+                  .into_iter()
+                  .map(|tag: Tag| tag.id)
+                  .collect::<Vec<Uuid>>()
+          )
+          .push(")) = ")
+          .push_bind(tags.len() as i64);
+    }
+
+    // For tags_excluded: ensure none of the tag IDs are present
+    if let Some(tags) = params.tags_excluded {
+        qb.push(" AND NOT EXISTS (SELECT 1 FROM track_tags tt2 WHERE tt2.track_id = t.track_id AND tt2.tag_id = ANY(")
+          .push_bind(
+              tags.into_iter()
+                  .map(|tag| tag.id)
+                  .collect::<Vec<Uuid>>()
+          )
+          .push("))");
+    }
+
+    // For categories_included: ensure the track has all the provided category IDs
+    if let Some(categories) = params.categories_included {
+        qb.push(" AND c.category_id = ANY(")
+            .push_bind(
+                categories
+                    .into_iter()
+                    .map(|cat| cat.id)
+                    .collect::<Vec<Uuid>>(),
+            )
+            .push(")");
+    }
+
+    // For categories_excluded: ensure none of the category IDs are present
+    if let Some(categories) = params.categories_excluded {
+        qb.push(" AND NOT (c.category_id = ANY(")
+            .push_bind(
+                categories
+                    .into_iter()
+                    .map(|cat| cat.id)
+                    .collect::<Vec<Uuid>>(),
+            )
+            .push("))");
+    }
+
+    // Group by track ID, title, creator ID, description, audio URL, private, and category
+    qb.push(" GROUP BY t.track_id, t.title, t.creator_id, t.description, t.audio_url, t.private, c.category_id");
+
+    // Add an ORDER BY clause for backend sorting
+    match params.sort_by {
+        Some(sort) => match sort.as_str() {
+            "title" => qb.push(" ORDER BY t.title ASC"),
+            "creator" => qb.push(" ORDER BY u.name ASC"),
+            "created" => qb.push(" ORDER BY t.created_at ASC"),
+            _ => qb.push(" ORDER BY t.created_at ASC"),
+        },
+        None => qb.push(" ORDER BY t.created_at ASC"),
+    };
+
+    let offset = (page - 1.0) * page_size;
+
+    qb.push(" LIMIT ")
+        .push_bind(page_size)
+        .push(" OFFSET ")
+        .push_bind(offset);
+
+    // Execute the query
+
+    let query = qb.build();
+
+    let result: Result<Vec<PgRow>, HTTPError> = query.fetch_all(db).map_err(HTTPError::from).await;
+    match result {
+        Ok(audios) => {
+            let mut result = Vec::new();
+            for audio in audios {
+                log::debug!("Audio: {:?}", audio);
+                result.push(Audio {
+                    id: audio.get("track_id"),
+                    title: audio.get("title"),
+                    creator: audio.get("creator"),
+                    description: audio.get("description"),
+                    audio_url: audio.get("audio_url"),
+                    private: audio.get("private"),
+                    category: serde_json::from_value(audio.get("category")).unwrap(),
+                    tags: serde_json::from_value(audio.get("tags")).unwrap(),
+                });
+            }
+            Ok(Page {
+                current_page: page,
+                page_size,
+                has_more: result.len() as f64 == page_size,
+                items: result,
+            })
+        }
+        Err(e) => {
+            log::error!("Error searching audios: {:?}", e);
+            Err(e)
+        }
+    }
+}
+
+pub async fn update_url(db: &PgPool, audio_id: Uuid, url: &str) -> Result<(), HTTPError> {
+    let result = sqlx::query!(
+        "UPDATE tracks SET audio_url = $1 WHERE track_id = $2",
+        url,
+        audio_id
+    )
+    .execute(db)
+    .map_err(|e| {
+        log::error!("Error updating audio url: {:?}", e);
+        HTTPError::InternalServerError
+    })
+    .await?;
+
+    match result.rows_affected() {
+        1 => Ok(()),
+        _ => Err(HTTPError::InternalServerError),
+    }
+}
+
+pub async fn get_status(db: &PgPool, audio_id: Uuid) -> Result<AudioStatus, HTTPError> {
+    let result = sqlx::query!(
+        "SELECT status as \"status: AudioStatus\" FROM tracks WHERE track_id = $1",
+        audio_id
+    )
+    .fetch_one(db)
+    .map_err(HTTPError::from)
+    .await;
+
+    match result {
+        Ok(record) => Ok(record.status),
+        Err(e) => {
+            log::error!("Error getting status: {:?}", e);
+            Err(HTTPError::from(e))
+        }
+    }
 }
 
 pub async fn update_status(
