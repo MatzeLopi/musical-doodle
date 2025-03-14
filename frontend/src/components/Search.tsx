@@ -3,41 +3,33 @@
 import React, { useState } from 'react';
 import TagSelector from './TagSelector';
 import CategorySelector from './CategoriesSelector';
-import { Category, Tag } from './types';
+import { Category, Tag, SearchFilters } from './types';
 
-export interface SearchFilters {
-  tagsIncluded: Tag[];
-  tagsExcluded: Tag[];
-  categoryIncluded: Category | null;
-  categoryExcluded: Category | null;
-  username: string;
-  title: string;
-}
 
 interface SearchComponentProps {
   onSearch: (filters: SearchFilters) => void;
 }
 
 const SearchComponent: React.FC<SearchComponentProps> = ({ onSearch }) => {
-  const [tagsIncluded, setTagsIncluded] = useState<Tag[]>([]);
-  const [tagsExcluded, setTagsExcluded] = useState<Tag[]>([]);
-  const [categoryIncluded, setCategoryIncluded] = useState<Category | null>(null);
-  const [categoryExcluded, setCategoryExcluded] = useState<Category | null>(null);
+  const [tags_included, setTagsIncluded] = useState<Tag[]>([]);
+  const [tags_excluded, setTagsExcluded] = useState<Tag[]>([]);
+  const [categories_included, setCategoryIncluded] = useState<Category[]>([]);
+  const [categories_excluded, setCategoryExcluded] = useState<Category[]>([]);
   const [username, setUsername] = useState('');
   const [title, setTitle] = useState('');
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     onSearch({
-      tagsIncluded,
-      tagsExcluded,
-      categoryIncluded,
-      categoryExcluded,
-      username,
-      title,
+      tags_included: tags_included.length ? tags_included : undefined,
+      tags_excluded: tags_excluded.length ? tags_excluded : undefined,
+      categories_included: categories_included.length ? categories_included : undefined,
+      categories_excluded: categories_excluded.length ? categories_excluded : undefined,
+      creator: username.trim() ? username : undefined,
+      title: title.trim() ? title : undefined,
     });
   };
-  
+
 
   return (<form
     onSubmit={handleSubmit}
@@ -73,7 +65,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onSearch }) => {
       <div className="min-w-[150px]">
         <TagSelector
           onTagChange={setTagsIncluded}
-          disabledTagIds={tagsExcluded.map((tag) => tag.id)}
+          disabledTagIds={tags_excluded.map((tag) => tag.id)}
         />
       </div>
     </div>
@@ -84,7 +76,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onSearch }) => {
       <div className="min-w-[150px]">
         <TagSelector
           onTagChange={setTagsExcluded}
-          disabledTagIds={tagsIncluded.map((tag) => tag.id)}
+          disabledTagIds={tags_included.map((tag) => tag.id)}
         />
       </div>
     </div>
@@ -95,7 +87,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onSearch }) => {
       <div className="min-w-[120px]">
         <CategorySelector
           onCategoryChange={setCategoryIncluded}
-          disabledCategoryIds={categoryExcluded ? [categoryExcluded.id] : []}
+          disabledCategoryIds={categories_excluded.map((cat) => cat.id)}
         />
       </div>
     </div>
@@ -106,7 +98,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onSearch }) => {
       <div className="min-w-[120px]">
         <CategorySelector
           onCategoryChange={setCategoryExcluded}
-          disabledCategoryIds={categoryIncluded ? [categoryIncluded.id] : []}
+          disabledCategoryIds={categories_included.map((cat) => cat.id)}
         />
       </div>
     </div>

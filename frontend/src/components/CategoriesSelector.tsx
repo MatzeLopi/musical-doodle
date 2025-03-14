@@ -12,7 +12,7 @@ interface Option {
 }
 
 interface CategorySelectorProps {
-  onCategoryChange: (category: Category | null) => void;
+  onCategoryChange: (category: Category[]) => void;
   disabledCategoryIds?: string[];
 }
 
@@ -47,11 +47,9 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   }));
 
   const handleChange = (option: SingleValue<Option>) => {
+    const category: Category[] = option ? [{ id: option.value, name: option.label }] : [];
     setSelectedOption(option);
-    const selectedCategory = option
-      ? categories.find((cat) => cat.id === option.value) || null
-      : null;
-    onCategoryChange(selectedCategory);
+    onCategoryChange(category);
   };
 
   // **Custom Styles for react-select**
