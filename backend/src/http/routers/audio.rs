@@ -1,9 +1,12 @@
 use crate::{
     crud::audio::{self, AudioStatus},
     http::{dependencies, error::Error as HTTPError, utils, AppState},
-    schemas::audios::{
-        Audio, Category, Tag, UpdateCategory, UpdateDescription, UpdateTags, UpdateTitle,
-        UploadAudioMetadata, UploadChunk,
+    schemas::{
+        audios::{
+            Audio, Category, Tag, UpdateCategory, UpdateDescription, UpdateTags, UpdateTitle,
+            UploadAudioMetadata, UploadChunk,
+        },
+        Payload,
     },
 };
 use axum::{
@@ -54,6 +57,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/sound/tags/create", post(create_tag))
         .route("/sound/categories", get(get_categories))
         .route("/sound/categories/create", post(create_category))
+        //.route("/sound/status", get(get_status))
         .with_state(state)
 }
 

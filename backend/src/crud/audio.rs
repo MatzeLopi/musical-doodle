@@ -5,7 +5,7 @@ use crate::{
 use futures::TryFutureExt;
 use itertools;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{postgres::PgRow, FromRow, PgPool, Row};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::Type)]
@@ -15,6 +15,31 @@ pub enum AudioStatus {
     Uploading,
     Complete,
     Failed,
+}
+
+impl FromRow<'_, PgRow> for AudioStatus {
+    fn from_row(row: &PgRow) -> Result<AudioStatus, sqlx::Error> {
+        let status: &str = row.try_get("status")?;
+        return match status {
+            "pending" => Ok(AudioStatus::Pending),
+            "uploading" => Ok(AudioStatus::Uploading),
+            "complete" => Ok(AudioStatus::Complete),
+            "failed" => Ok(AudioStatus::Failed),
+            _ => Err(sqlx::Error::Decode(Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Invalid audio status: {}", status),
+            )))),
+        };
+    }
+}
+
+pub async fn search(db: &PgPool) -> Result<Vec<Audio>, HTTPError> {
+    let result = sqlx::query!("Select")
+        .fetch_all(db)
+        .map_err(HTTPError::from)
+        .await;
+
+    todo!();
 }
 
 pub async fn update_status(
