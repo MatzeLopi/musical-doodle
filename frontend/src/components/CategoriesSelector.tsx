@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Select, { SingleValue, StylesConfig } from 'react-select';
+import Select, { MultiValue, StylesConfig } from 'react-select';
 import { fetchFromAPI } from '../utils/communication';
 import { Category } from './types';
 
@@ -21,7 +21,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   disabledCategoryIds = [],
 }) => {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedOption, setSelectedOption] = useState<Option | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -46,59 +46,69 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     isDisabled: disabledCategoryIds.includes(cat.id),
   }));
 
-  const handleChange = (option: SingleValue<Option>) => {
-    const category: Category[] = option ? [{ id: option.value, name: option.label }] : [];
-    setSelectedOption(option);
-    onCategoryChange(category);
+  const handleChange = (selected: MultiValue<Option>) => {
+    const newCategories: Category[] = selected
+      ? selected.map((option) => ({ id: option.value, name: option.label }))
+      : [];
+    setSelectedOptions(selected as Option[]);
+    onCategoryChange(newCategories);
   };
 
-  // **Custom Styles for react-select**
-  const customStyles: StylesConfig<Option, false> = {
-    control: (styles, { isFocused }) => ({
-      ...styles,
-      backgroundColor: 'var(--tw-bg-opacity) var(--tw-bg)',
-      borderColor: isFocused ? '#8B5CF6' : 'var(--tw-border-opacity) var(--tw-border)',
-      borderWidth: '1px',
-      borderRadius: '6px',
-      padding: '2px',
-      boxShadow: isFocused ? '0 0 0 2px rgba(139, 92, 246, 0.5)' : 'none',
-      transition: 'all 0.2s ease-in-out',
+  // Custom Styles for react-select to handle dark mode with "sky" theme
+  const customStyles: StylesConfig<Option, true> = {
+    control: (provided) => ({
+      ...provided,
+      backgroundColor: 'transparent',
+      borderColor: 'rgb(63 63 70 / 1)', // zinc-700
+      boxShadow: 'none',
+      '&:hover': {
+        borderColor: '#0284c7', // sky-600
+      },
     }),
-    menu: (styles) => ({
-      ...styles,
-      backgroundColor: 'var(--tw-bg-opacity) var(--tw-bg)',
-      borderRadius: '6px',
-      padding: '4px 0',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
+    menu: (provided) => ({
+      ...provided,
+      backgroundColor: '#3f3f46', // zinc-700
     }),
-    option: (styles, { isFocused, isDisabled }) => ({
-      ...styles,
-      backgroundColor: isFocused ? '#8B5CF6' : 'transparent',
-      color: isFocused ? '#ffffff' : 'var(--tw-text-opacity) var(--tw-text)',
-      cursor: isDisabled ? 'not-allowed' : 'pointer',
-      opacity: isDisabled ? 0.5 : 1,
-      transition: 'background-color 0.2s ease-in-out, color 0.2s ease-in-out',
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isFocused ? '#0369a1' : 'transparent', // sky-700
+      color: state.isDisabled ? '#a1a1aa' : '#f4f4f5', // gray out disabled options
+      '&:hover': {
+        backgroundColor: state.isDisabled ? 'transparent' : '#0284c7', // sky-600
+      },
     }),
-    placeholder: (styles) => ({
-      ...styles,
-      color: 'var(--tw-text-opacity) var(--tw-text)',
-      fontSize: '0.875rem',
+    multiValue: (provided) => ({
+      ...provided,
+      backgroundColor: '#0ea5e9', // sky-500
     }),
-    singleValue: (styles) => ({
-      ...styles,
-      color: 'var(--tw-text-opacity) var(--tw-text)',
+    multiValueLabel: (provided) => ({
+      ...provided,
+      color: 'white',
+    }),
+    multiValueRemove: (provided) => ({
+      ...provided,
+      color: 'white',
+      '&:hover': {
+        backgroundColor: '#0284c7', // sky-600
+        color: 'white',
+      },
+    }),
+    input: (provided) => ({
+      ...provided,
+      color: '#f4f4f5', // zinc-100
     }),
   };
 
   return (
     <Select
+      isMulti // Changed to isMulti
       options={options}
-      value={selectedOption}
+      value={selectedOptions}
       onChange={handleChange}
-      isClearable
-      placeholder="Select a category"
+      placeholder="Select categories"
+      className="react-select-container"
+      classNamePrefix="react-select"
       styles={customStyles}
-      className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
     />
   );
 };

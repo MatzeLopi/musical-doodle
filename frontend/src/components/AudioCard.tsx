@@ -54,25 +54,27 @@ const AudioCard: React.FC<AudioProps> = ({
 
 }) => {
   return (
-    <div className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow rounded-lg p-4 mb-4 transition-all hover:shadow-md">
-
-      {/* Header with title, category and play button */}
-      <div className="flex items-center justify-center space-x-4 sm:max-w-sm md:max-w-md xl:max-w-xl m-auto">
-        <div className="flex-1 flex flex-col">
-          <div className="flex items-center space-x-2">
-            <h3 className="text-xl font-semibold">{cropText(title, 40)}</h3>
-            <CategoryBadge category={category} />
+    <div className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow rounded-lg p-4 mb-4 transition-all hover:shadow-md h-full flex flex-col justify-between">
+      <div>
+        {/* Header with title, category and play button */}
+        <div className="flex items-center justify-between space-x-4 mb-2">
+          <div className="flex-1 flex flex-col">
+            <div className="flex items-center space-x-2">
+              <h3 className="text-xl font-semibold">{cropText(title, 40)}</h3>
+              <CategoryBadge category={category} />
+            </div>
           </div>
-          {/* Preview of the description */}
-          <p className="text-zinc-600 dark:text-zinc-400 break-words">{cropText(description, 200)}</p>
+          <div className="flex-none">
+            <PlayButton track={{ id, title, url: audio_url }} />
+          </div>
         </div>
-        <div className="flex-none justify-center">
-          <PlayButton track={{ id, title, url: audio_url }} />
-        </div>
+        {/* Preview of the description */}
+        <p className="text-zinc-600 dark:text-zinc-400 break-words text-sm">{cropText(description, 100)}</p>
       </div>
 
+
       {/* Metadata: Creator and Tags on the left; optional Private indicator on the right */}
-      <div className="flex items-center justify-center mt-3">
+      <div className="flex items-center justify-between mt-4">
         <div className="flex items-center space-x-2">
           <CreatorButton creator={creator} />
           <TagsList tags={tags} />

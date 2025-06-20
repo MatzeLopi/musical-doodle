@@ -51,60 +51,48 @@ const TagSelector: React.FC<TagSelectorProps> = ({ onTagChange, disabledTagIds =
     onTagChange(tags);
   };
 
-  // **Custom Styles for react-select**
+  // Custom Styles for react-select to handle dark mode with "sky" theme
   const customStyles: StylesConfig<Option, true> = {
-    control: (styles, { isFocused }) => ({
-      ...styles,
-      backgroundColor: 'var(--tw-bg-opacity) var(--tw-bg)',
-      borderColor: isFocused ? '#8B5CF6' : 'var(--tw-border-opacity) var(--tw-border)',
-      borderWidth: '1px',
-      borderRadius: '6px',
-      padding: '2px',
-      boxShadow: isFocused ? '0 0 0 2px rgba(139, 92, 246, 0.5)' : 'none',
-      transition: 'all 0.2s ease-in-out',
-    }),
-    menu: (styles) => ({
-      ...styles,
-      backgroundColor: 'var(--tw-bg-opacity) var(--tw-bg)',
-      borderRadius: '6px',
-      padding: '4px 0',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
-    }),
-    option: (styles, { isFocused, isDisabled }) => ({
-      ...styles,
-      backgroundColor: isFocused ? '#8B5CF6' : 'transparent',
-      color: isFocused ? '#ffffff' : 'var(--tw-text-opacity) var(--tw-text)',
-      cursor: isDisabled ? 'not-allowed' : 'pointer',
-      opacity: isDisabled ? 0.5 : 1,
-      transition: 'background-color 0.2s ease-in-out, color 0.2s ease-in-out',
-    }),
-    placeholder: (styles) => ({
-      ...styles,
-      color: 'var(--tw-text-opacity) var(--tw-text)',
-      fontSize: '0.875rem',
-    }),
-    multiValue: (styles) => ({
-      ...styles,
-      backgroundColor: '#8B5CF6',
-      borderRadius: '4px',
-      padding: '2px 6px',
-      color: '#ffffff',
-    }),
-    multiValueLabel: (styles) => ({
-      ...styles,
-      color: '#ffffff',
-    }),
-    multiValueRemove: (styles) => ({
-      ...styles,
-      color: '#ffffff',
-      ':hover': {
-        backgroundColor: '#7C3AED',
-        color: '#ffffff',
+    control: (provided) => ({
+      ...provided,
+      backgroundColor: 'transparent',
+      borderColor: 'rgb(63 63 70 / 1)', // zinc-700
+      boxShadow: 'none',
+      '&:hover': {
+        borderColor: '#0284c7', // sky-600
       },
     }),
-    singleValue: (styles) => ({
-      ...styles,
-      color: 'var(--tw-text-opacity) var(--tw-text)',
+    menu: (provided) => ({
+      ...provided,
+      backgroundColor: '#3f3f46', // zinc-700
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isFocused ? '#0369a1' : 'transparent', // sky-700
+      color: '#f4f4f5', // zinc-100
+      '&:hover': {
+        backgroundColor: '#0284c7', // sky-600
+      },
+    }),
+    multiValue: (provided) => ({
+      ...provided,
+      backgroundColor: '#0ea5e9', // sky-500
+    }),
+    multiValueLabel: (provided) => ({
+      ...provided,
+      color: 'white',
+    }),
+    multiValueRemove: (provided) => ({
+      ...provided,
+      color: 'white',
+      '&:hover': {
+        backgroundColor: '#0284c7', // sky-600
+        color: 'white',
+      },
+    }),
+    input: (provided) => ({
+      ...provided,
+      color: '#f4f4f5', // zinc-100
     }),
   };
 
@@ -115,8 +103,9 @@ const TagSelector: React.FC<TagSelectorProps> = ({ onTagChange, disabledTagIds =
       value={selectedOptions}
       onChange={handleChange}
       placeholder="Select tags"
-      styles={customStyles}
-      className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+      className="react-select-container"
+      classNamePrefix="react-select"
+      styles={customStyles} // Apply custom styles for better theming
     />
   );
 };

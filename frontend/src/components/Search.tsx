@@ -43,7 +43,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onSearch }) => {
         value={username}
         onChange={(e) => setUsername(e.target.value)}
         placeholder="User"
-        className="w-32 p-2 border border-zinc-300 dark:border-zinc-600 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+        className="w-32 p-2 border border-zinc-300 dark:border-zinc-600 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500"
       />
     </div>
 
@@ -55,7 +55,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onSearch }) => {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Title"
-        className="w-32 p-2 border border-zinc-300 dark:border-zinc-600 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+        className="w-32 p-2 border border-zinc-300 dark:border-zinc-600 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500"
       />
     </div>
 
@@ -104,7 +104,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onSearch }) => {
     </div>
 
     {/* Search Button */}
-    <div className="flex flex-col">
+    <div className="flex flex-col self-end">
       <button
         type="submit"
         className="w-full px-4 py-2 text-white bg-sky-600 rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500"

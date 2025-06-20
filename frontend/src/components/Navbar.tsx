@@ -7,7 +7,7 @@ export default function Header() {
     const { isLoggedIn } = useAuth();
 
     return (
-        <div className="flex items-center justify-between bg-zinc-100 dark:bg-zinc-900 py-4 px-4">
+        <div className="flex items-center justify-between bg-zinc-100 dark:bg-zinc-900 py-4 px-4 sticky top-0 z-50">
             <a href="/">
                 <Logo size={50} />
 

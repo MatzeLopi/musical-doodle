@@ -1,3 +1,66 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ... your existing styles ... */
+
+@keyframes scroll {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+.animate-scroll {
+    animation: scroll 40s linear infinite;
+}
+
+/* --- Add these new rules below --- */
+
+/* Style the global scrollbar for WebKit-based browsers (Chrome, Safari, Edge) */
+body::-webkit-scrollbar {
+    width: 12px;
+    /* Set the width of the scrollbar */
+}
+
+body::-webkit-scrollbar-track {
+    background: #e5e7eb;
+    /* A light gray track, matching zinc-200 */
+}
+
+body::-webkit-scrollbar-thumb {
+    background-color: #a1a1aa;
+    /* A neutral gray thumb, matching zinc-400 */
+    border-radius: 20px;
+    /* Rounded corners for the thumb */
+    border: 3px solid #e5e7eb;
+    /* Creates a padding effect */
+}
+
+body::-webkit-scrollbar-thumb:hover {
+    background-color: #71717a;
+    /* Darker on hover, matching zinc-500 */
+}
+
+/* Styles for when dark mode is enabled */
+@media (prefers-color-scheme: dark) {
+    body::-webkit-scrollbar-track {
+        background: #18181b;
+        /* A dark track, matching zinc-900 */
+    }
+
+    body::-webkit-scrollbar-thumb {
+        background-color: #3f3f46;
+        /* A dark thumb, matching zinc-700 */
+        border-color: #18181b;
+        /* Match the dark track color for the border */
+    }
+
+    body::-webkit-scrollbar-thumb:hover {
+        background-color: #52525b;
+        /* Lighter on hover, matching zinc-600 */
+    }
+}
