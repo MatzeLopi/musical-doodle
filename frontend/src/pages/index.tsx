@@ -16,6 +16,7 @@ const Home: NextPage = () => {
       <div className="flex flex-col min-h-screen bg-gray-100">
         <Navbar />
         <BackendState />
+        <h1 className="text-center">Welcome</h1>
       </div>
     </>
   );

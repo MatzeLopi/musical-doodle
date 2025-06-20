@@ -182,7 +182,7 @@ async fn to_backblaze(
 
     log::debug!("Stream response: {:?}", stream_resp);
 
-    todo("Update function to set the audiolink correctly -> Currently not the backblaze link");
+    todo!("Update function to set the audiolink correctly -> Currently not the backblaze link");
 
     match stream_resp.status_code() {
         code if code < 300 && code >= 200 => {
