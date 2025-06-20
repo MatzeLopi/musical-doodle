@@ -107,7 +107,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onSearch }) => {
     <div className="flex flex-col">
       <button
         type="submit"
-        className="w-full px-4 py-2 text-white bg-rose-600 rounded-md hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500"
+        className="w-full px-4 py-2 text-white bg-sky-600 rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500"
       >
         Search
       </button>

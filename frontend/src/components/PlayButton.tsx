@@ -22,7 +22,7 @@ const PlayButton: React.FC<PlayButtonProps> = ({ track }) => {
   return (
     <button
       onClick={handleClick}
-      className="w-12 h-12 bg-rose-600 text-white rounded-md flex items-center justify-center hover:bg-rose-700 transition"
+      className="w-12 h-12 bg-sky-600 text-white rounded-md flex items-center justify-center hover:bg-sky-700 transition"
     >
       {currentTrack?.id === track.id && isPlaying ? (
         // Pause Icon

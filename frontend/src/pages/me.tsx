@@ -20,19 +20,19 @@ const UserProfile = () => {
     // Fetch user info if logged in
     useEffect(() => {
         const fetchUser = async () => {
-          try {
-            const data = await fetchFromAPI("/users/me");
-            if (data.status === 200) {
-              const json = await data.json();
-              setUser(json);
-            } else if (data.status === 204) {
-              setAlertMessage("You are not logged in. Redirecting to login...");
+            try {
+                const data = await fetchFromAPI("/users/me");
+                if (data.status === 200) {
+                    const json = await data.json();
+                    setUser(json);
+                } else if (data.status === 204) {
+                    setAlertMessage("You are not logged in. Redirecting to login...");
+                }
+            } catch (error) {
+                setAlertMessage((error as Error).message);
             }
-          } catch (error) {
-            setAlertMessage((error as Error).message);
-          }
         };
-      
+
         fetchUser();
     }, []);
     if (alertMessage) {
@@ -40,8 +40,8 @@ const UserProfile = () => {
             window.location.href = '/login';
         }, 1500);
         return (
-            <Info  type="error" message="You are not logged in. Redirecting to login..." onClose={ () => {}}/>
-            );
+            <Info type="error" message="You are not logged in. Redirecting to login..." onClose={() => { }} />
+        );
     }
 
     // Show loading if user data is not yet fetched
@@ -53,7 +53,7 @@ const UserProfile = () => {
             </div>
         );
     }
-    
+
 
     return (
         <div className="flex flex-col min-h-screen bg-zinc-100 dark:bg-zinc-900">
@@ -79,7 +79,7 @@ const UserProfile = () => {
                         </div>
                         <div className="flex justify-between">
                             <span className="font-medium text-zinc-700 dark:text-zinc-300">Verified:</span>
-                            <span className={`${user.verified ? "text-emerald-500" : "text-rose-600"} font-medium`}>
+                            <span className={`${user.verified ? "text-emerald-500" : "text-sky-600"} font-medium`}>
                                 {user.verified ? "Yes" : "No"}
                             </span>
                         </div>
@@ -93,7 +93,7 @@ const UserProfile = () => {
             </div>
 
             <BackendState />
-            
+
         </div>
     );
 };

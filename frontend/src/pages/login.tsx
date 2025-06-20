@@ -12,7 +12,7 @@ const Login: React.FC = () => {
     const router = useRouter();
     const { isLoggedIn, setIsLoggedIn } = useAuth();
     const [justLoggedIn, setJustLoggedIn] = useState(false);
-    
+
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -50,11 +50,11 @@ const Login: React.FC = () => {
         setTimeout(() => {
             window.location.href = '/';
         }, 1500);
-    } 
+    }
 
     return (
-        <> 
-        
+        <>
+
             <div className="flex flex-col min-h-screen bg-zinc-100 dark:bg-zinc-900">
                 <Navbar />
                 <div className="flex items-center justify-center m-auto">
@@ -92,7 +92,7 @@ const Login: React.FC = () => {
                             {/* Register Link */}
                             <div>
                                 <p className="block text-sm text-center text-zinc-700 dark:text-zinc-300">
-                                    <a href="/register" className="text-purple-500 hover:text-purple-600">
+                                    <a href="/register" className="text-sky-600 hover:text-sky-500">
                                         Register
                                     </a>{' '}
                                     if you don’t have an account.
@@ -100,12 +100,12 @@ const Login: React.FC = () => {
                             </div>
 
                             {/* Error Message */}
-                            {error && <p className="text-sm text-center text-rose-600">{error}</p>}
+                            {error && <p className="text-sm text-center text-sky-600">{error}</p>}
 
                             {/* Login Button */}
                             <button
                                 type="submit"
-                                className="w-full px-4 py-2 text-white bg-rose-600 rounded-md hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500"
+                                className="w-full px-4 py-2 text-white bg-sky-600 rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500"
                             >
                                 Login
                             </button>
@@ -117,14 +117,14 @@ const Login: React.FC = () => {
             </div>
             {/* Alert */}
             {justLoggedIn && (
-                <Info type = "success" message="Login successful. Redirecting to Home" onClose={() => { }} />
+                <Info type="success" message="Login successful. Redirecting to Home" onClose={() => { }} />
             )}
             {
-            (isLoggedIn && !justLoggedIn) &&(
-                <Info type='info' message="Already logged in. Redirecting to Home" onClose={() => { }} />    
-            )}
+                (isLoggedIn && !justLoggedIn) && (
+                    <Info type='info' message="Already logged in. Redirecting to Home" onClose={() => { }} />
+                )}
             {error && (
-                <Info type='error' message={error} onClose={() => setError('')}/>
+                <Info type='error' message={error} onClose={() => setError('')} />
             )}
 
 

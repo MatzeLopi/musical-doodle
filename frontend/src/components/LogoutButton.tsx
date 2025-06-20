@@ -41,7 +41,7 @@ const LogoutButton = () => {
         <div className="relative">
             <button
                 onClick={handleLogout}
-                className="px-4 py-2 sm:px-6 sm:py-3 text-white bg-rose-600 rounded-lg shadow-md hover:bg-rose-700 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 disabled:opacity-50"
+                className="px-4 py-2 sm:px-6 sm:py-3 text-white bg-sky-600 rounded-lg shadow-md hover:bg-sky-700 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 disabled:opacity-50"
                 disabled={loading}
             >
                 {loading ? 'Logging out...' : 'Logout'}
@@ -68,7 +68,7 @@ const LogoutButton = () => {
             {/* Error Alert */}
             {error && (
                 <div className="fixed inset-0 flex justify-center items-center z-50">
-                    <div className="bg-rose-600 text-white p-6 rounded-lg shadow-lg flex items-center space-x-3 animate-fade-in">
+                    <div className="bg-sky-600 text-white p-6 rounded-lg shadow-lg flex items-center space-x-3 animate-fade-in">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             className="h-6 w-6 text-white"

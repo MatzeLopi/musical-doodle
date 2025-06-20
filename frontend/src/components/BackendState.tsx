@@ -28,7 +28,7 @@ const ServerStatus = () => {
         <>
             {/* Conditionally render the popup when the server is down */}
             {!isAvailable && (
-                <div className="fixed bottom-5 right-5 bg-rose-600 text-white text-sm px-5 py-3 rounded-xl shadow-lg opacity-80 hover:opacity-100 transition-all max-w-xs md:max-w-sm animate-slide-up">
+                <div className="fixed bottom-5 right-5 bg-sky-600 text-white text-sm px-5 py-3 rounded-xl shadow-lg opacity-80 hover:opacity-100 transition-all max-w-xs md:max-w-sm animate-slide-up">
                     <p className="font-semibold">
                         Cannot reach the server. <br />
                         Please try again later.

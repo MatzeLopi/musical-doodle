@@ -19,7 +19,7 @@ const Info: React.FC<InfoProps> = ({ message, type = 'info', duration = 3000, on
   // Alert styles based on type
   const typeStyles = {
     success: 'bg-emerald-600 text-white bg-opacity-80',
-    error: 'bg-rose-600 text-white bg-opacity-80',
+    error: 'bg-sky-600 text-white bg-opacity-80',
     warning: 'bg-yellow-600 text-white bg-opacity-80',
     info: 'bg-blue-600 text-white bg-opacity-80',
   };

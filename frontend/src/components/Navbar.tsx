@@ -48,29 +48,29 @@ export default function Header() {
 
                         <ul className="flex flex-col items-center space-y-6 text-lg font-medium">
                             <li>
-                                <a href="/" className="hover:text-purple-500">Feed</a>
+                                <a href="/" className="hover:text-sky-600">Feed</a>
                             </li>
                             <li>
-                                <a href="/search" className="hover:text-purple-500">Search</a>
+                                <a href="/search" className="hover:text-sky-600">Search</a>
                             </li>
                             {!isLoggedIn && (
                                 <li>
-                                    <a href="/login" className="hover:text-purple-500">Login</a>
+                                    <a href="/login" className="hover:text-sky-600">Login</a>
                                 </li>
                             )}
                             {!isLoggedIn && (
                                 <li>
-                                    <a href="/register" className="hover:text-purple-500">Register</a>
+                                    <a href="/register" className="hover:text-sky-600">Register</a>
                                 </li>
                             )}
                             {isLoggedIn && (
                                 <li>
-                                    <a href="/file" className="hover:text-purple-500">Upload</a>
+                                    <a href="/file" className="hover:text-sky-600">Upload</a>
                                 </li>
                             )}
                             {isLoggedIn && (
                                 <li>
-                                    <a href="/me" className="hover:text-purple-500">Me</a>
+                                    <a href="/me" className="hover:text-sky-600">Me</a>
                                 </li>
                             )}
                         </ul>
@@ -80,29 +80,29 @@ export default function Header() {
                 {/* Desktop Menu */}
                 <ul className="DESKTOP-MENU hidden space-x-8 lg:flex uppercase text-zinc-900 dark:text-zinc-100">
                     <li>
-                        <a href="/" className="hover:text-purple-500">Feed</a>
+                        <a href="/" className="hover:text-sky-600">Feed</a>
                     </li>
                     <li>
-                        <a href="/search" className="hover:text-purple-500">Search</a>
+                        <a href="/search" className="hover:text-sky-600">Search</a>
                     </li>
                     {!isLoggedIn && (
                         <li>
-                            <a href="/login" className="hover:text-purple-500">Login</a>
+                            <a href="/login" className="hover:text-sky-600">Login</a>
                         </li>
                     )}
                     {!isLoggedIn && (
                         <li>
-                            <a href="/register" className="hover:text-purple-500">Register</a>
+                            <a href="/register" className="hover:text-sky-600">Register</a>
                         </li>
                     )}
                     {isLoggedIn && (
                         <li>
-                            <a href="/file" className="hover:text-purple-500">Upload</a>
+                            <a href="/file" className="hover:text-sky-600">Upload</a>
                         </li>
                     )}
                     {isLoggedIn && (
                         <li>
-                            <a href="/me" className="hover:text-purple-500">Me</a>
+                            <a href="/me" className="hover:text-sky-600">Me</a>
                         </li>
                     )}
                 </ul>

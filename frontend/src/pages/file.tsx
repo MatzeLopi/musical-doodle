@@ -133,17 +133,17 @@ export default function UploadPage() {
                         )}
 
                         {/* Inputs */}
-                        <input 
-                            type="text" 
-                            placeholder="Title" 
-                            value={title} 
-                            onChange={(e) => setTitle(e.target.value)} 
+                        <input
+                            type="text"
+                            placeholder="Title"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
                             className="mt-3 p-2 w-full border border-zinc-300 dark:border-zinc-600 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                         />
-                        <textarea 
-                            placeholder="Description" 
-                            value={description} 
-                            onChange={(e) => setDescription(e.target.value)} 
+                        <textarea
+                            placeholder="Description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
                             className="mt-3 p-2 w-full border border-zinc-300 dark:border-zinc-600 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                         />
 
@@ -153,12 +153,12 @@ export default function UploadPage() {
 
                         {/* Private Checkbox */}
                         <label className="flex items-center mt-3 text-zinc-700 dark:text-zinc-300">
-                            <input 
-                                type="checkbox" 
-                                checked={isPrivate} 
-                                onChange={() => setIsPrivate(!isPrivate)} 
+                            <input
+                                type="checkbox"
+                                checked={isPrivate}
+                                onChange={() => setIsPrivate(!isPrivate)}
                                 className="mr-2"
-                            /> 
+                            />
                             Private
                         </label>
 
@@ -166,7 +166,7 @@ export default function UploadPage() {
                         <button
                             onClick={uploadFile}
                             disabled={!file || uploading}
-                            className="mt-4 px-4 py-2 text-white bg-rose-600 rounded-md hover:bg-rose-700 disabled:bg-zinc-400 transition"
+                            className="mt-4 px-4 py-2 text-white bg-sky-600 rounded-md hover:bg-sky-700 disabled:bg-zinc-400 transition"
                         >
                             {uploading ? 'Uploading...' : 'Upload'}
                         </button>

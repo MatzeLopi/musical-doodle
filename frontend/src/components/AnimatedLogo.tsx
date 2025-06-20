@@ -10,8 +10,8 @@ const AnimatedLogo = ({ size = 50 }) => {
     >
       <defs>
         <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ff416c" />
-          <stop offset="100%" stopColor="#ff4b2b" />
+          <stop offset="0%" stopColor="#0ea5e9" />
+          <stop offset="100%" stopColor="#048f2e" />
         </linearGradient>
       </defs>
 
@@ -58,7 +58,7 @@ const AnimatedLogo = ({ size = 50 }) => {
         d="M75 120 Q100 140, 125 120 Q100 130, 75 120 Z"
         fill="url(#grad)"
         stroke="#ff4b2b"
-        strokeWidth="2"
+        strokeWidth="0"
       >
         <animate
           attributeName="d"
