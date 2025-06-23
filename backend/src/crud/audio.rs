@@ -338,7 +338,7 @@ pub async fn upload(db: &PgPool, audio: &Audio) -> Result<(), HTTPError> {
         .execute(db)
         .map_err(|e| {
             log::error!("Error uploading audio: {:?}", e);
-            HTTPError::InternalServerError
+            HTTPError::from(e)
         })
         .await?;
     }
@@ -350,6 +350,36 @@ pub async fn upload(db: &PgPool, audio: &Audio) -> Result<(), HTTPError> {
             Err(HTTPError::InternalServerError)
         }
     }
+}
+
+pub async fn update_category(
+    db: &PgPool,
+    audio_id: Uuid,
+    user_id: Uuid,
+    category_id: Uuid,
+) -> Result<(), HTTPError> {
+    let result = sqlx::query!("UPDATE tracks SET category_id = $1 WHERE track_id = $2 AND creator_id = $3 AND EXISTS (SELECT 1 FROM categories WHERE category_id = $1);", category_id, audio_id, user_id).execute(db).await;
+
+    match result {
+        Ok(_) => Ok(()),
+        Err(e) => Err(HTTPError::from(e)),
+    }
+}
+pub async fn remove_tag_from(
+    db: &PgPool,
+    audio: &Audio,
+    user_id: Uuid,
+    tag_id: Uuid,
+) -> Result<(), HTTPError> {
+    todo!()
+}
+pub async fn add_tag_to(
+    db: &PgPool,
+    audio_id: Uuid,
+    user_id: Uuid,
+    tag_id: Uuid,
+) -> Result<(), HTTPError> {
+    todo!()
 }
 
 pub async fn update_title(

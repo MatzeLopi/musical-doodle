@@ -17,9 +17,6 @@ pub enum Error {
     #[error("Internal Server Error")]
     InternalServerError,
 
-    #[error("an error occurred with the database")]
-    Sqlx(#[from] sqlx::Error),
-
     #[error("an internal server error occurred")]
     Anyhow(#[from] anyhow::Error),
 
@@ -28,6 +25,31 @@ pub enum Error {
 
     #[error("Bad Request")]
     BadRequest,
+
+    #[error("Database Error")]
+    Sqlx(sqlx::Error),
+}
+
+impl From<sqlx::Error> for Error {
+    fn from(err: sqlx::Error) -> Self {
+        match &err {
+            sqlx::Error::Database(db_err) => {
+                if let Some(pg_err) = db_err.try_downcast_ref::<sqlx::postgres::PgDatabaseError>() {
+                    match pg_err.code() {
+                        "23505" => return Error::Conflict,
+                        "23503" => return Error::BadRequest,
+                        _ => {} // Für alle anderen DB-Fehler, fahre unten fort
+                    }
+                }
+                log::warn!("Unhandled database error: {:?}", err);
+                Error::Sqlx(err)
+            }
+            _ => {
+                log::error!("Unhandled SQLx error: {:?}", err);
+                Error::Sqlx(err)
+            }
+        }
+    }
 }
 
 impl Error {

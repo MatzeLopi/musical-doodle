@@ -51,7 +51,8 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/sound/update/set_public", post(set_public))
         .route("/sound/update/description", post(update_description))
         .route("/sound/update/title", post(update_title))
-        .route("/sound/update/tags", post(update_tags))
+        .route("/sound/tags/add", post(add_tag_to))
+        .route("/sound/tags/remove", post(remove_tag_from))
         .route("/sound/update/category", post(update_category))
         .route("/sound/tags", get(get_tags))
         .route("/sound/tags/create", post(create_tag))
@@ -182,8 +183,6 @@ async fn to_backblaze(
 
     log::debug!("Stream response: {:?}", stream_resp);
 
-    todo!("Update function to set the audiolink correctly -> Currently not the backblaze link");
-
     match stream_resp.status_code() {
         code if code < 300 && code >= 200 => {
             _ = remove_file(&file_path).await.map_err(|e| {
@@ -203,6 +202,7 @@ async fn to_backblaze(
 
 async fn start_upload(
     auth_user: dependencies::AuthUser,
+
     State(state): State<Arc<AppState>>,
     Json(metadata): Json<UploadAudioMetadata>,
 ) -> Result<impl IntoResponse, HTTPError> {
@@ -221,6 +221,7 @@ async fn start_upload(
     })?;
 
     let s3_url = format!("{}/{}.m4a", chrono::Utc::now().year(), uid);
+    let s3_url = format!("{}/{}", state.config.s3_url, s3_url);
 
     let audio = Audio {
         id: uid,
@@ -416,19 +417,12 @@ async fn update_category(
     Json(data): Json<UpdateCategory>,
 ) -> Result<impl IntoResponse, HTTPError> {
     // Update audio file category
-    todo!();
+    audio::update_category(&state.db, data.id, auth_user.user_id, data.category.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn update_tags(
-    State(state): State<Arc<AppState>>,
-    auth_user: dependencies::AuthUser,
-    Json(data): Json<UpdateTags>,
-) -> Result<impl IntoResponse, HTTPError> {
-    // Update audio file tags
-    todo!();
-    Ok(StatusCode::NO_CONTENT)
-}
+async fn add_tag_to(State(state): State<Arc<AppState>>, auth_user: dependencies::AuthUser) {}
+async fn remove_tag_from(State(state): State<Arc<AppState>>, auth_user: dependencies::AuthUser) {}
 
 async fn delete_audio(
     State(state): State<Arc<AppState>>,
