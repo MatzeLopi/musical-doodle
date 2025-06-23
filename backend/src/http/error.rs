@@ -1,6 +1,8 @@
 use axum::http::header::WWW_AUTHENTICATE;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::Json;
+use serde_json::json;
 use sqlx::error::DatabaseError;
 
 #[derive(thiserror::Error, Debug)]
@@ -11,8 +13,10 @@ pub enum Error {
     #[error("user may not perform that action")]
     Forbidden,
 
-    #[error("request path not found")]
-    NotFound,
+    // KORREKTUR 1: Muss einen Typ enthalten, hier `String`.
+    // Der `#[error(...)]`-Text wird auch angepasst, um die Nachricht anzuzeigen.
+    #[error("Not Found: {0}")]
+    NotFound(String),
 
     #[error("Internal Server Error")]
     InternalServerError,
@@ -30,6 +34,15 @@ pub enum Error {
     Sqlx(sqlx::Error),
 }
 
+// KORREKTUR 2: Hinzufügen der `Default`-Implementierung für einen Standard-Fehler.
+impl Default for Error {
+    fn default() -> Self {
+        // Hier legen wir fest, dass unser "Standardfehler" ein NotFound
+        // mit einer generischen Nachricht ist.
+        Error::NotFound("The requested resource was not found.".to_string())
+    }
+}
+
 impl From<sqlx::Error> for Error {
     fn from(err: sqlx::Error) -> Self {
         match &err {
@@ -38,7 +51,7 @@ impl From<sqlx::Error> for Error {
                     match pg_err.code() {
                         "23505" => return Error::Conflict,
                         "23503" => return Error::BadRequest,
-                        _ => {} // Für alle anderen DB-Fehler, fahre unten fort
+                        _ => {}
                     }
                 }
                 log::warn!("Unhandled database error: {:?}", err);
@@ -57,7 +70,8 @@ impl Error {
         match self {
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::Forbidden => StatusCode::FORBIDDEN,
-            Self::NotFound => StatusCode::NOT_FOUND,
+            // KORREKTUR 3: Der Match-Arm muss jetzt den inneren Wert mit `_` ignorieren.
+            Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Sqlx(_) | Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Conflict => StatusCode::CONFLICT,
@@ -68,28 +82,27 @@ impl Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        match self {
+        let (status, error_message) = match self {
             Self::Unauthorized => {
-                return (
-                    self.status_code(),
-                    [(WWW_AUTHENTICATE, "JWT")],
-                    self.to_string(),
-                )
-                    .into_response();
+                let body = Json(json!({ "error": self.to_string() }));
+                return (self.status_code(), [(WWW_AUTHENTICATE, "JWT")], body).into_response();
             }
+            // KORREKTUR 4: Dieser Arm funktioniert jetzt, weil die Enum-Definition korrekt ist.
+            // Er extrahiert die spezifische Nachricht für eine bessere Fehlerausgabe.
+            Self::NotFound(message) => (self.status_code(), message),
 
-            Self::Sqlx(ref e) => {
-                log::error!("SQLx error: {:?}", e);
-            }
+            _ => (self.status_code(), self.to_string()),
+        };
 
-            Self::Anyhow(ref e) => {
-                log::error!("Generic error: {:?}", e);
-            }
-
-            _ => (),
+        if matches!(self, Self::Sqlx(_) | Self::Anyhow(_)) {
+            log::error!("Error Detail: {:?}", self);
         }
 
-        (self.status_code(), self.to_string()).into_response()
+        let body = Json(json!({
+            "error": error_message
+        }));
+
+        (status, body).into_response()
     }
 }
 

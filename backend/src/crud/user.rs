@@ -26,7 +26,9 @@ pub async fn get_verification_token(username: &str, db: &PgPool) -> Result<Strin
 
     match result.verification_token {
         Some(token) => Ok(token),
-        None => Err(HTTPError::NotFound),
+        None => Err(HTTPError::NotFound(
+            "Verification token not Found".to_string(),
+        )),
     }
 }
 

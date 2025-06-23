@@ -358,28 +358,95 @@ pub async fn update_category(
     user_id: Uuid,
     category_id: Uuid,
 ) -> Result<(), HTTPError> {
-    let result = sqlx::query!("UPDATE tracks SET category_id = $1 WHERE track_id = $2 AND creator_id = $3 AND EXISTS (SELECT 1 FROM categories WHERE category_id = $1);", category_id, audio_id, user_id).execute(db).await;
-
-    match result {
-        Ok(_) => Ok(()),
-        Err(e) => Err(HTTPError::from(e)),
-    }
+    sqlx::query!("UPDATE tracks SET category_id = $1 WHERE track_id = $2 AND creator_id = $3 AND EXISTS (SELECT 1 FROM categories WHERE category_id = $1);", category_id, audio_id, user_id)
+        .execute(db)
+        .map_err(|e| 
+            {
+                log::error!("Error when updating audio category: {}",e);
+                HTTPError::from(e)
+            }
+        ).await?;
+    Ok(())
 }
 pub async fn remove_tag_from(
     db: &PgPool,
-    audio: &Audio,
+    audio_id: Uuid,
     user_id: Uuid,
     tag_id: Uuid,
 ) -> Result<(), HTTPError> {
-    todo!()
+    sqlx::query!("DELETE FROM track_tags USING tracks where track_tags.track_id = tracks.track_id and tracks.track_id = $1 and track_tags.tag_id = $2 and tracks.creator_id = $3", audio_id, tag_id, user_id)
+        .execute(db)
+        .map_err(|e| {
+            log::error!("Error when removing Tag: {}",e);
+            HTTPError::from(e)}
+        ).await?;
+
+    Ok(())
 }
+
 pub async fn add_tag_to(
     db: &PgPool,
     audio_id: Uuid,
     user_id: Uuid,
     tag_id: Uuid,
 ) -> Result<(), HTTPError> {
-    todo!()
+    let mut tx = db.begin().await?;
+
+    let owner_check: bool = sqlx::query_scalar!(
+        "SELECT EXISTS(SELECT 1 FROM tracks WHERE track_id = $1 AND creator_id = $2)", 
+        audio_id,
+        user_id
+    )
+    .fetch_one(&mut *tx) 
+    .await?
+    .unwrap_or(false);
+
+    if !owner_check {
+        // Um zwischen NotFound und Forbidden zu unterscheiden (optional aber gut für die API)
+        let audio_exists: bool = sqlx::query_scalar!(
+            "SELECT EXISTS(SELECT 1 FROM tracks WHERE track_id = $1)",
+            audio_id
+        )
+        .fetch_one(&mut *tx)
+        .await?.unwrap_or(false);
+
+        if !audio_exists {
+            return Err(HTTPError::NotFound(format!("Audio with ID {} not found.", audio_id)));
+        } else {
+            return Err(HTTPError::Forbidden);
+        }
+    }
+
+    let tag_exists: bool = sqlx::query_scalar!(
+        "SELECT EXISTS(SELECT 1 FROM tags WHERE tag_id = $1)",
+        tag_id
+    )
+    .fetch_one(&mut *tx)
+    .await?
+    .unwrap_or(false);
+
+    if !tag_exists {
+        return Err(HTTPError::BadRequest(format!("Tag with ID {} not found.", tag_id)));
+    }
+
+    sqlx::query!(
+        r#"
+        INSERT INTO track_tags (track_id, tag_id)
+        VALUES ($1, $2)
+        ON CONFLICT (track_id, tag_id) DO NOTHING
+        "#,
+        audio_id,
+        tag_id
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().map_err(|e| {
+        log::error!("Could not commit TX on Tag add: {}",e);
+        HTTPError::from(e)
+    }).await?;
+
+    Ok(())
 }
 
 pub async fn update_title(
