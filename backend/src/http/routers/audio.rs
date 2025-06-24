@@ -247,18 +247,17 @@ async fn upload(
     Protobuf(part): Protobuf<UploadChunk>,
 ) -> Result<impl IntoResponse, HTTPError> {
     let id = Uuid::parse_str(&part.id).map_err(|e| {
-        log::error!("Error parsing UUID: {:?}", e);
-        HTTPError::BadRequest
+        let message = format!("Error parsing UUID {:?}", e);
+        log::error!("{}", message);
+        HTTPError::BadRequest(message)
     })?;
 
     let file_path = format!("{}/{}.{}", UPLOAD_DIR, id.simple().to_string(), part.ext);
-    // First, get the reference to the RwLock, and hold it longer.
     let locks = FILE_LOCKS.read().await;
 
-    // Now, check for the lock associated with the id.
     let lock = match locks.get(&id) {
         Some(lock) => lock,
-        None => return Err(HTTPError::BadRequest),
+        None => return Err(HTTPError::BadRequest("No Lock with ID found.".to_string())),
     };
 
     // Lock the mutex for the file.
@@ -310,8 +309,9 @@ async fn end_upload(
     let id = match metadata.id {
         Some(id) => id,
         None => {
-            log::error!("No ID provided");
-            return Err(HTTPError::BadRequest);
+            let msg = "No ID provided".to_string();
+            log::error!("{}", msg);
+            return Err(HTTPError::BadRequest(msg));
         }
     };
 
@@ -320,8 +320,9 @@ async fn end_upload(
         let counter = match counters.get(&id) {
             Some(counter) => counter,
             None => {
-                log::error!("No counter found for ID: {:?}", id);
-                return Err(HTTPError::BadRequest);
+                let msg = format!("No chunk upload counter found for {:?}", id);
+                log::error!("{}", msg);
+                return Err(HTTPError::BadRequest(msg));
             }
         };
 
@@ -330,12 +331,12 @@ async fn end_upload(
     };
 
     if recieved_chunks != metadata.total_chunks {
-        log::error!(
+        let message = format!(
             "Expected {} chunks, but got {}",
-            metadata.total_chunks,
-            recieved_chunks
+            metadata.total_chunks, recieved_chunks
         );
-        return Err(HTTPError::BadRequest);
+        log::error!("{}", message);
+        return Err(HTTPError::BadRequest(message));
     } else {
         CHUNK_COUNTERS.write().await.remove(&id);
         FILE_LOCKS.write().await.remove(&id);

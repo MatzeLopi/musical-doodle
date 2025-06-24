@@ -27,8 +27,8 @@ pub enum Error {
     #[error("conflict, resource already exists")]
     Conflict,
 
-    #[error("Bad Request")]
-    BadRequest,
+    #[error("Bad Request {0}")]
+    BadRequest(String),
 
     #[error("Database Error")]
     Sqlx(sqlx::Error),
@@ -37,9 +37,8 @@ pub enum Error {
 // KORREKTUR 2: Hinzufügen der `Default`-Implementierung für einen Standard-Fehler.
 impl Default for Error {
     fn default() -> Self {
-        // Hier legen wir fest, dass unser "Standardfehler" ein NotFound
-        // mit einer generischen Nachricht ist.
-        Error::NotFound("The requested resource was not found.".to_string())
+        Error::NotFound("The requested resource was not found.".to_string());
+        Error::BadRequest("Bad request.".to_string())
     }
 }
 
@@ -50,7 +49,7 @@ impl From<sqlx::Error> for Error {
                 if let Some(pg_err) = db_err.try_downcast_ref::<sqlx::postgres::PgDatabaseError>() {
                     match pg_err.code() {
                         "23505" => return Error::Conflict,
-                        "23503" => return Error::BadRequest,
+                        "23503" => return Error::BadRequest("SQL 23503".to_string()),
                         _ => {}
                     }
                 }
@@ -70,12 +69,11 @@ impl Error {
         match self {
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::Forbidden => StatusCode::FORBIDDEN,
-            // KORREKTUR 3: Der Match-Arm muss jetzt den inneren Wert mit `_` ignorieren.
             Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Sqlx(_) | Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Conflict => StatusCode::CONFLICT,
-            Self::BadRequest => StatusCode::BAD_REQUEST,
+            Self::BadRequest(_) => StatusCode::BAD_REQUEST,
         }
     }
 }
@@ -87,11 +85,9 @@ impl IntoResponse for Error {
                 let body = Json(json!({ "error": self.to_string() }));
                 return (self.status_code(), [(WWW_AUTHENTICATE, "JWT")], body).into_response();
             }
-            // KORREKTUR 4: Dieser Arm funktioniert jetzt, weil die Enum-Definition korrekt ist.
-            // Er extrahiert die spezifische Nachricht für eine bessere Fehlerausgabe.
-            Self::NotFound(message) => (self.status_code(), message),
+            Self::NotFound(ref message) => (self.status_code(), message),
 
-            _ => (self.status_code(), self.to_string()),
+            _ => (self.status_code(), &self.to_string()),
         };
 
         if matches!(self, Self::Sqlx(_) | Self::Anyhow(_)) {
