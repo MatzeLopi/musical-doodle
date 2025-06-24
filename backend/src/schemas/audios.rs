@@ -82,7 +82,7 @@ pub struct UpdateCategory {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UpdateTags {
+pub struct UpdateTag {
     pub id: Uuid,
-    pub tags: Vec<Tag>,
+    pub tag: Tag,
 }

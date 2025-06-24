@@ -3,7 +3,7 @@ use crate::{
     http::{dependencies, error::Error as HTTPError, utils, AppState},
     schemas::{
         audios::{
-            Audio, Category, QueryParams, Tag, UpdateCategory, UpdateDescription, UpdateTags,
+            Audio, Category, QueryParams, Tag, UpdateCategory, UpdateDescription, UpdateTag,
             UpdateTitle, UploadAudioMetadata, UploadChunk,
         },
         Payload,
@@ -422,8 +422,22 @@ async fn update_category(
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn add_tag_to(State(state): State<Arc<AppState>>, auth_user: dependencies::AuthUser) {}
-async fn remove_tag_from(State(state): State<Arc<AppState>>, auth_user: dependencies::AuthUser) {}
+async fn add_tag_to(
+    State(state): State<Arc<AppState>>,
+    auth_user: dependencies::AuthUser,
+    Json(data): Json<UpdateTag>,
+) -> Result<impl IntoResponse, HTTPError> {
+    audio::add_tag_to(&state.db, data.id, auth_user.user_id, data.tag.id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+async fn remove_tag_from(
+    State(state): State<Arc<AppState>>,
+    auth_user: dependencies::AuthUser,
+    Json(data): Json<UpdateTag>,
+) -> Result<impl IntoResponse, HTTPError> {
+    audio::remove_tag_from(&state.db, data.id, auth_user.user_id, data.tag.id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
 
 async fn delete_audio(
     State(state): State<Arc<AppState>>,
