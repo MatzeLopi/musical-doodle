@@ -195,7 +195,7 @@ pub async fn update_url(db: &PgPool, audio_id: Uuid, url: &str) -> Result<(), HT
     .execute(db)
     .map_err(|e| {
         log::error!("Error updating audio url: {:?}", e);
-        HTTPError::InternalServerError
+        HTTPError::from(e)
     })
     .await?;
 
@@ -237,7 +237,7 @@ pub async fn update_status(
     .execute(db)
     .map_err(|e| {
         log::error!("Error updating status: {:?}", e);
-        HTTPError::InternalServerError
+        HTTPError::from(e)
     })
     .await?;
 
@@ -251,30 +251,30 @@ pub async fn update_status(
 pub async fn get_tags(db: &PgPool) -> Result<Vec<Tag>, HTTPError> {
     let result = sqlx::query!("SELECT * FROM tags")
         .fetch_all(db)
-        .map_err(HTTPError::from)
-        .await;
-    match result {
-        Ok(tags) => {
-            let mut result = Vec::new();
-            for tag in tags {
-                result.push(Tag {
-                    id: tag.tag_id,
-                    name: tag.name,
-                });
-            }
-            return Ok(result);
-        }
-        Err(e) => {
-            log::error!("Error getting tags: {:?}", e);
-            return Err(HTTPError::from(e));
-        }
-    }
+        .map_err(|e| {
+            log::error!("Error on get_tags call {:?}",e);
+            HTTPError::from(e)})
+        .await?;
+
+    
+    let tags: Vec<Tag> = result
+        .into_iter()
+        .map(|tag| Tag {
+            id: tag.tag_id,
+            name: tag.name,
+        })
+        .collect();
+    Ok(tags)
 }
+
 
 pub async fn create_tag(db: &PgPool, tag: String) -> Result<(), HTTPError> {
     let result = sqlx::query!("INSERT INTO tags (name) VALUES ($1)", tag)
         .execute(db)
-        .map_err(HTTPError::from)
+        .map_err(|e| {
+            log::error!("Could not create tag, DB error: {:?}",e);
+            HTTPError::from(e)
+        })
         .await?;
     match result.rows_affected() {
         1 => Ok(()),
@@ -285,30 +285,26 @@ pub async fn create_tag(db: &PgPool, tag: String) -> Result<(), HTTPError> {
 pub async fn get_categories(db: &PgPool) -> Result<Vec<Category>, HTTPError> {
     let result = sqlx::query!("SELECT * FROM categories")
         .fetch_all(db)
-        .map_err(HTTPError::from)
-        .await;
-    match result {
-        Ok(categories) => {
-            let mut result = Vec::new();
-            for category in categories {
-                result.push(Category {
-                    id: category.category_id,
-                    name: category.name,
-                });
-            }
-            return Ok(result);
-        }
-        Err(e) => {
-            log::error!("Error getting categories: {:?}", e);
-            return Err(HTTPError::from(e));
-        }
-    }
+        .map_err(|e| {
+            log::error!("Could not get tags from DB: {:?}",e);
+            HTTPError::from(e)})
+        .await?;
+
+    let categories:Vec<Category> = result
+        .into_iter()
+        .map(|cat| Category { id: cat.category_id, name: cat.name})
+        .collect();
+
+    Ok(categories)
 }
 
 pub async fn create_category(db: &PgPool, category: String) -> Result<(), HTTPError> {
     let result = sqlx::query!("INSERT INTO categories (name) VALUES ($1)", category)
         .execute(db)
-        .map_err(HTTPError::from)
+        .map_err(|e|{
+            log::error!("Could not create category {:?}",e);
+            HTTPError::from(e)
+        })
         .await?;
     match result.rows_affected() {
         1 => Ok(()),
@@ -317,6 +313,9 @@ pub async fn create_category(db: &PgPool, category: String) -> Result<(), HTTPEr
 }
 
 pub async fn upload(db: &PgPool, audio: &Audio) -> Result<(), HTTPError> {
+
+    let mut tx = db.begin().await?;
+
     let result = sqlx::query!(
         "INSERT INTO tracks (track_id,  creator_id, title, description, audio_url, category_id) VALUES ($1, $2, $3, $4, $5, $6)",
         audio.id,
@@ -325,9 +324,10 @@ pub async fn upload(db: &PgPool, audio: &Audio) -> Result<(), HTTPError> {
         audio.description,
         audio.audio_url,
         audio.category.id
-    ).execute(db).map_err(|e|{
+    ).execute(&mut *tx).map_err(|e|{
         log::error!("Error uploading audio: {:?}", e);
-        HTTPError::InternalServerError}).await?;
+        HTTPError::from(e)
+    }).await?;
 
     for tag in &audio.tags {
         _ = sqlx::query!(
@@ -335,13 +335,17 @@ pub async fn upload(db: &PgPool, audio: &Audio) -> Result<(), HTTPError> {
             audio.id,
             tag.id
         )
-        .execute(db)
+        .execute(&mut *tx)
         .map_err(|e| {
             log::error!("Error uploading audio: {:?}", e);
             HTTPError::from(e)
-        })
-        .await?;
+        }).await?;
     }
+
+    tx.commit().map_err( |e|{
+        log::error!("Could not commit upload transaction to db: {:?}",e);
+        HTTPError::from(e)}
+    ).await?;
 
     match result.rows_affected() {
         1 => Ok(()),
@@ -362,7 +366,7 @@ pub async fn update_category(
         .execute(db)
         .map_err(|e| 
             {
-                log::error!("Error when updating audio category: {}",e);
+                log::error!("Error when updating audio category: {:?}",e);
                 HTTPError::from(e)
             }
         ).await?;
@@ -377,7 +381,7 @@ pub async fn remove_tag_from(
     sqlx::query!("DELETE FROM track_tags USING tracks where track_tags.track_id = tracks.track_id and tracks.track_id = $1 and track_tags.tag_id = $2 and tracks.creator_id = $3", audio_id, tag_id, user_id)
         .execute(db)
         .map_err(|e| {
-            log::error!("Error when removing Tag: {}",e);
+            log::error!("Error when removing Tag: {:?}",e);
             HTTPError::from(e)}
         ).await?;
 
@@ -402,7 +406,6 @@ pub async fn add_tag_to(
     .unwrap_or(false);
 
     if !owner_check {
-        // Um zwischen NotFound und Forbidden zu unterscheiden (optional aber gut für die API)
         let audio_exists: bool = sqlx::query_scalar!(
             "SELECT EXISTS(SELECT 1 FROM tracks WHERE track_id = $1)",
             audio_id
@@ -442,7 +445,7 @@ pub async fn add_tag_to(
     .await?;
 
     tx.commit().map_err(|e| {
-        log::error!("Could not commit TX on Tag add: {}",e);
+        log::error!("Could not commit TX on Tag add: {:?}",e);
         HTTPError::from(e)
     }).await?;
 
@@ -462,8 +465,13 @@ pub async fn update_title(
         user_id
     )
     .execute(db)
-    .map_err(HTTPError::from)
+    .map_err(|e| {
+        log::error!("Could not update title: {:?}",e);
+        HTTPError::from(e)
+    })
     .await?;
+
+    // Better HTTP Error? 
     match result.rows_affected() {
         1 => Ok(()),
         _ => Err(HTTPError::Forbidden),
@@ -483,7 +491,10 @@ pub async fn update_description(
         user_id
     )
     .execute(db)
-    .map_err(HTTPError::from)
+    .map_err(|e| {
+        log::error!("Could not update the description {:?}",e);
+        HTTPError::from(e)
+    })
     .await?;
     match result.rows_affected() {
         1 => Ok(()),
@@ -498,7 +509,10 @@ pub async fn set_public(db: &PgPool, audio_id: Uuid, user_id: Uuid) -> Result<()
         user_id
     )
     .execute(db)
-    .map_err(HTTPError::from)
+    .map_err(|e|{
+        log::error!("Could not set public: {:?}",e);
+        HTTPError::from(e)
+    })
     .await?;
     match result.rows_affected() {
         1 => Ok(()),
@@ -513,7 +527,10 @@ pub async fn set_private(db: &PgPool, audio_id: Uuid, user_id: Uuid) -> Result<(
         user_id
     )
     .execute(db)
-    .map_err(HTTPError::from)
+    .map_err(|e| {
+        log::error!("Could not set private: {:?}",e);
+        HTTPError::from(e)
+    })
     .await?;
     match result.rows_affected() {
         1 => Ok(()),
@@ -528,7 +545,11 @@ pub async fn delete(db: &PgPool, audio_id: Uuid, user_id: Uuid) -> Result<(), HT
         user_id
     )
     .execute(db)
-    .map_err(HTTPError::from)
+    .map_err(|e| {
+        log::error!("Could not delete track: {:?}",e);
+        HTTPError::from(e)
+    }
+    )
     .await?;
     match result.rows_affected() {
         1 => Ok(()),
@@ -539,15 +560,12 @@ pub async fn delete(db: &PgPool, audio_id: Uuid, user_id: Uuid) -> Result<(), HT
 pub async fn get_audio_url(db: &PgPool, audio_id: Uuid) -> Result<String, HTTPError> {
     let result = sqlx::query!("SELECT audio_url FROM tracks WHERE track_id = $1", audio_id)
         .fetch_one(db)
-        .map_err(HTTPError::from)
-        .await;
-    match result {
-        Ok(audio) => Ok(audio.audio_url),
-        Err(e) => {
-            log::error!("Error getting audio url: {:?}", e);
-            Err(HTTPError::from(e))
-        }
-    }
+        .map_err(|e| {
+            log::error!("Could not get audio URL: {:?}", e);
+            HTTPError::from(e)
+        })
+        .await?;
+    Ok(result.audio_url)
 }
 
 pub async fn get_audios(db: &PgPool, username: String) -> Result<Vec<Audio>, HTTPError> {
@@ -575,39 +593,34 @@ pub async fn get_audios(db: &PgPool, username: String) -> Result<Vec<Audio>, HTT
         username
     )
     .fetch_all(db)
-    .map_err(HTTPError::from)
-    .await;
+    .map_err(|e| {
+        log::error!("Could not get Audios: {:?}",e);
+        HTTPError::from(e)
+    })
+    .await?;
 
-    match result {
-        Ok(audios) => {
-            let mut result = Vec::new();
-            for audio in audios {
-                result.push(Audio {
-                    id: audio.track_id,
-                    title: audio.title,
-                    creator: audio.creator_id,
-                    description: audio.description.unwrap_or_default(),
-                    audio_url: audio.audio_url,
-                    private: audio.private,
-                    category: Category {
-                        id: audio.category_id,
-                        name: audio.category_name,
-                    },
-                    tags: itertools::izip!(
-                        audio.tag_ids.unwrap_or_default(),
-                        audio.tag_names.unwrap_or_default()
-                    )
-                    .map(|(id, name)| Tag { id, name })
-                    .collect(),
-                });
-            }
-            Ok(result)
-        }
-        Err(e) => {
-            log::error!("Error getting audios: {:?}", e);
-            Err(HTTPError::from(e))
-        }
+    let mut retval = Vec::new();
+    for audio in result {
+        retval.push(Audio {
+            id: audio.track_id,
+            title: audio.title,
+            creator: audio.creator_id,
+            description: audio.description.unwrap_or_default(),
+            audio_url: audio.audio_url,
+            private: audio.private,
+            category: Category {
+                id: audio.category_id,
+                name: audio.category_name,
+            },
+            tags: itertools::izip!(
+                audio.tag_ids.unwrap_or_default(),
+                audio.tag_names.unwrap_or_default()
+            )
+            .map(|(id, name)| Tag { id, name })
+            .collect(),
+        });
     }
+    Ok(retval)
 }
 
 pub async fn get_my_audios(db: &PgPool, uid: Uuid) -> Result<Vec<Audio>, HTTPError> {
@@ -630,8 +643,11 @@ pub async fn get_my_audios(db: &PgPool, uid: Uuid) -> Result<Vec<Audio>, HTTPErr
     ,uid
     )
     .fetch_all(db)
-    .map_err(HTTPError::from)
-    .await;
+    .map_err(|e| {
+        log::error!("Could not get my audios: {:?}",e);
+        HTTPError::from(e)
+    })
+    .await?;
     match result {
         Ok(audios) => {
             let mut result = Vec::new();
