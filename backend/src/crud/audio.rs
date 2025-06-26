@@ -630,6 +630,7 @@ pub async fn get_my_audios(db: &PgPool, uid: Uuid) -> Result<Vec<Audio>, HTTPErr
         t.creator_id, 
         t.description, 
         t.audio_url, 
+        t.private,
         c.category_id, 
         c.name AS category_name,
         COALESCE(ARRAY_AGG(DISTINCT tg.tag_id) FILTER (WHERE tg.tag_id IS NOT NULL), '{}') AS tag_ids,
@@ -648,34 +649,27 @@ pub async fn get_my_audios(db: &PgPool, uid: Uuid) -> Result<Vec<Audio>, HTTPErr
         HTTPError::from(e)
     })
     .await?;
-    match result {
-        Ok(audios) => {
-            let mut result = Vec::new();
-            for audio in audios {
-                result.push(Audio {
-                    id: audio.track_id,
-                    title: audio.title,
-                    creator: audio.creator_id,
-                    description: audio.description.unwrap_or_default(),
-                    audio_url: audio.audio_url,
-                    private: true,
-                    category: Category {
-                        id: audio.category_id,
-                        name: audio.category_name,
-                    },
-                    tags: itertools::izip!(
-                        audio.tag_ids.unwrap_or_default(),
-                        audio.tag_names.unwrap_or_default()
-                    )
-                    .map(|(id, name)| Tag { id, name })
-                    .collect(),
-                });
-            }
-            Ok(result)
-        }
-        Err(e) => {
-            log::error!("Error getting audios: {:?}", e);
-            return Err(HTTPError::from(e));
-        }
+    
+    let mut retval = Vec::new();
+    for audio in result {
+        retval.push(Audio {
+            id: audio.track_id,
+            title: audio.title,
+            creator: audio.creator_id,
+            description: audio.description.unwrap_or_default(),
+            audio_url: audio.audio_url,
+            private: audio.private,
+            category: Category {
+                id: audio.category_id,
+                name: audio.category_name,
+            },
+            tags: itertools::izip!(
+                audio.tag_ids.unwrap_or_default(),
+                audio.tag_names.unwrap_or_default()
+            )
+            .map(|(id, name)| Tag { id, name })
+            .collect(),
+        });
     }
+    Ok(retval)
 }
