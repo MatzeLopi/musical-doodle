@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use uuid::Uuid;
 
 #[derive(prost::Message)]
@@ -39,19 +40,28 @@ pub struct UploadAudioMetadata {
     pub total_chunks: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct Category {
     pub id: Uuid,
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+impl Default for Category {
+    fn default() -> Self {
+        Category {
+            id: Uuid::nil(),
+            name: "None".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct Tag {
     pub id: Uuid,
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Audio {
     pub id: Uuid,
     pub title: String,
@@ -61,6 +71,10 @@ pub struct Audio {
     pub private: bool,
     pub category: Category,
     pub tags: Vec<Tag>,
+    pub daily_plays: i64,
+    pub weekly_plays: i64,
+    pub monthly_plays: i64,
+    pub total_plays: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -59,11 +59,18 @@ pub async fn search(
                     FILTER (WHERE tg.tag_id IS NOT NULL),
                 '[]'
             ) AS tags
+            COALESCE(tpc.total_plays, 0) AS total_plays,
+            COALESCE(tpc.monthly_plays, 0) AS monthly_plays,
+            COALESCE(tpc.weekly_plays, 0) AS weekly_plays,
+            COALESCE(tpc.daily_plays, 0) AS daily_plays
+
         FROM tracks t
         JOIN users u ON t.creator_id = u.user_id
         JOIN categories c ON t.category_id = c.category_id
         LEFT JOIN track_tags tt ON t.track_id = tt.track_id
         LEFT JOIN tags tg ON tg.tag_id = tt.tag_id
+        LEFT JOIN track_play_counts tpc ON t.track_id = tpc.track_id
+        
         WHERE 1=1
         AND t.private = false",
     );
@@ -131,7 +138,7 @@ pub async fn search(
     }
 
     // Group by track ID, title, creator ID, description, audio URL, private, and category
-    qb.push(" GROUP BY t.track_id, t.title, t.creator_id, t.description, t.audio_url, t.private, c.category_id");
+    qb.push(" GROUP BY t.track_id, t.title, t.creator_id, t.description, t.audio_url, t.private, c.category_id, tpc.total_plays, tpc.monthly_plays, tpc.weekly_plays, tpc.daily_plays ");
 
     // Add an ORDER BY clause for backend sorting
     match params.sort_by {
@@ -168,8 +175,12 @@ pub async fn search(
                     description: audio.get("description"),
                     audio_url: audio.get("audio_url"),
                     private: audio.get("private"),
-                    category: serde_json::from_value(audio.get("category")).unwrap(),
-                    tags: serde_json::from_value(audio.get("tags")).unwrap(),
+                    category: serde_json::from_value(audio.get("category")).unwrap_or_default(),
+                    tags: serde_json::from_value(audio.get("tags")).unwrap_or_default(),
+                    daily_plays: audio.get::<i64,_>("daily_plays"),
+                    weekly_plays: audio.get::<i64,_>("weekly_plays"),
+                    monthly_plays: audio.get::<i64,_>("monthly_plays"),
+                    total_plays: audio.get::<i64,_>("total_plays"),
                 });
             }
             Ok(Page {
@@ -578,17 +589,25 @@ pub async fn get_audios(db: &PgPool, username: String) -> Result<Vec<Audio>, HTT
             t.description,
             t.audio_url,
             t.private,
-            c.category_id,
-            c.name AS category_name,
-            ARRAY_REMOVE(ARRAY_AGG(DISTINCT tg.tag_id), NULL) AS tag_ids,
-            ARRAY_REMOVE(ARRAY_AGG(DISTINCT tg.name), NULL) AS tag_names
+            json_build_object('id', c.category_id, 'name', c.name) AS category,
+            COALESCE(
+                jsonb_agg(DISTINCT jsonb_build_object('id', tg.tag_id, 'name', tg.name))
+                    FILTER (WHERE tg.tag_id IS NOT NULL),
+                '[]'::jsonb
+            ) AS tags,
+            COALESCE(tpc.total_plays, 0) AS total_plays,
+            COALESCE(tpc.monthly_plays, 0) AS monthly_plays,
+            COALESCE(tpc.weekly_plays, 0) AS weekly_plays,
+            COALESCE(tpc.daily_plays, 0) AS daily_plays
         FROM tracks t
         JOIN users u ON t.creator_id = u.user_id
         JOIN categories c ON t.category_id = c.category_id
         LEFT JOIN track_tags tt ON t.track_id = tt.track_id
         LEFT JOIN tags tg ON tt.tag_id = tg.tag_id
+        LEFT JOIN track_play_counts tpc ON t.track_id = tpc.track_id
+
         WHERE u.username = $1 and t.private = false
-        GROUP BY t.track_id, c.category_id, c.name
+        GROUP BY t.track_id, c.category_id, c.name, tpc.total_plays, tpc.monthly_plays, tpc.weekly_plays, tpc.daily_plays
         "#,
         username
     )
@@ -608,39 +627,46 @@ pub async fn get_audios(db: &PgPool, username: String) -> Result<Vec<Audio>, HTT
             description: audio.description.unwrap_or_default(),
             audio_url: audio.audio_url,
             private: audio.private,
-            category: Category {
-                id: audio.category_id,
-                name: audio.category_name,
-            },
-            tags: itertools::izip!(
-                audio.tag_ids.unwrap_or_default(),
-                audio.tag_names.unwrap_or_default()
-            )
-            .map(|(id, name)| Tag { id, name })
-            .collect(),
+            category: serde_json::from_value(audio.category.unwrap_or_default()).unwrap_or_default(),
+            tags: serde_json::from_value(audio.tags.unwrap_or_default()).unwrap_or_default(),
+            daily_plays: audio.daily_plays.unwrap_or(0),
+            weekly_plays: audio.weekly_plays.unwrap_or(0),
+            monthly_plays: audio.monthly_plays.unwrap_or(0),
+            total_plays: audio.total_plays.unwrap_or(0),
         });
     }
     Ok(retval)
 }
 
 pub async fn get_my_audios(db: &PgPool, uid: Uuid) -> Result<Vec<Audio>, HTTPError> {
-    let result = sqlx::query!("SELECT 
+    let result = sqlx::query!(
+    r#"
+    SELECT 
         t.track_id, 
         t.title, 
         t.creator_id, 
         t.description, 
         t.audio_url, 
         t.private,
-        c.category_id, 
-        c.name AS category_name,
-        COALESCE(ARRAY_AGG(DISTINCT tg.tag_id) FILTER (WHERE tg.tag_id IS NOT NULL), '{}') AS tag_ids,
-        COALESCE(ARRAY_AGG(DISTINCT tg.name) FILTER (WHERE tg.name IS NOT NULL), '{}') AS tag_names
+        json_build_object('id', c.category_id, 'name', c.name) AS category,
+        COALESCE(
+            jsonb_agg(DISTINCT jsonb_build_object('id', tg.tag_id, 'name', tg.name))
+                FILTER (WHERE tg.tag_id IS NOT NULL),
+            '[]'::jsonb
+        ) AS tags,
+        COALESCE(tpc.total_plays, 0) AS total_plays,
+        COALESCE(tpc.monthly_plays, 0) AS monthly_plays,
+        COALESCE(tpc.weekly_plays, 0) AS weekly_plays,
+        COALESCE(tpc.daily_plays, 0) AS daily_plays
     FROM tracks t
     JOIN categories c ON t.category_id = c.category_id
     LEFT JOIN track_tags tt ON t.track_id = tt.track_id
     LEFT JOIN tags tg ON tt.tag_id = tg.tag_id
+    LEFT JOIN track_play_counts tpc ON t.track_id = tpc.track_id
+
     WHERE t.creator_id = $1
-    GROUP BY t.track_id, c.category_id, c.name"
+    GROUP BY t.track_id, c.category_id, c.name, tpc.total_plays, tpc.monthly_plays, tpc.weekly_plays, tpc.daily_plays
+    "#
     ,uid
     )
     .fetch_all(db)
@@ -659,16 +685,12 @@ pub async fn get_my_audios(db: &PgPool, uid: Uuid) -> Result<Vec<Audio>, HTTPErr
             description: audio.description.unwrap_or_default(),
             audio_url: audio.audio_url,
             private: audio.private,
-            category: Category {
-                id: audio.category_id,
-                name: audio.category_name,
-            },
-            tags: itertools::izip!(
-                audio.tag_ids.unwrap_or_default(),
-                audio.tag_names.unwrap_or_default()
-            )
-            .map(|(id, name)| Tag { id, name })
-            .collect(),
+            category: serde_json::from_value(audio.category.unwrap_or_default()).unwrap_or_default(),
+            tags: serde_json::from_value(audio.tags.unwrap_or_default()).unwrap_or_default(),
+            daily_plays: audio.daily_plays.unwrap_or(0),
+            weekly_plays: audio.weekly_plays.unwrap_or(0),
+            monthly_plays: audio.monthly_plays.unwrap_or(0),
+            total_plays: audio.total_plays.unwrap_or(0),
         });
     }
     Ok(retval)

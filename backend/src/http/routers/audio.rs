@@ -232,6 +232,10 @@ async fn start_upload(
         private: metadata.private,
         category: metadata.category,
         tags: metadata.tags,
+        daily_plays: 0,
+        monthly_plays: 0,
+        total_plays: 0,
+        weekly_plays: 0,
     };
 
     audio::upload(&state.db, &audio).await?;
@@ -396,7 +400,7 @@ async fn update_description(
     auth_user: dependencies::AuthUser,
     Json(data): Json<UpdateDescription>,
 ) -> Result<impl IntoResponse, HTTPError> {
-    // Update audio file description
+    // Update audio fitle description
     audio::update_description(&state.db, data.id, auth_user.user_id, data.description).await?;
     log::debug!("Updated audio description");
     Ok(StatusCode::NO_CONTENT)
