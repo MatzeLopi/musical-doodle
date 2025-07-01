@@ -10,7 +10,7 @@ use crate::{
     },
 };
 use axum::{
-    extract::{Json, State},
+    extract::{Json, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get, post, Router},

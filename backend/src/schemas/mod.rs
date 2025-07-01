@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 pub mod audios;
+pub mod metadata;
 pub mod users;
 
 #[derive(Debug, Serialize, Deserialize)]
